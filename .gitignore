@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Graph stuff
-.graphml
+*.graphml
