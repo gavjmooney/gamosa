@@ -579,7 +579,7 @@ def test5():
 def test7():
 
 
-    sa = SimulatedAnnealing("test.graphml", metrics_list=["edge_crossing", "edge_orthogonality"], cooling_schedule="linear_m", n_iters=1000)
+    sa = SimulatedAnnealing(None, metrics_list=["edge_crossing", "edge_orthogonality"], cooling_schedule="linear_m", n_iters=1000)
 
     G2 = sa.anneal()
 
