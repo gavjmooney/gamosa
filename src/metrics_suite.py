@@ -6,6 +6,7 @@ import random as rand
 import math
 from write_graph import write_graphml_pos
 
+
 class MetricsSuite():
     """A suite for calculating several metrics for graph drawing aesthetics, as well as methods for combining these into a single cost function.
     Takes as an argument an optional list of metrics to calculate (only edge crossings by default) and an optional method for combining them (weighted sum by default).
@@ -18,6 +19,8 @@ class MetricsSuite():
                         "node_orthogonality": {"func":self.node_orthogonality, "value":None, "weight":1},
                         "angular_resolution": {"func":self.angular_resolution, "value":None, "weight":1},
                         "symmetry": {"func":self.symmetry, "value":None, "weight":1},
+                        "node_resolution": {"func":self.node_resolution, "value":None, "weight":1},
+                        "edge_length": {"func":self.edge_length, "value":None, "weight":1},
         
         } 
         self.mcdat_dict = {"weighted_sum":self._weighted_sum,
@@ -724,6 +727,106 @@ class MetricsSuite():
 
         return total_sym / max(whole_area, total_area)
 
+
+    def get_bounding_box(self, G=None):
+        if G is None:
+            G = self.graph
+
+        first_node = rand.sample(list(G.nodes), 1)[0]
+        min_x, min_y = G.nodes[first_node]["x"], G.nodes[first_node]["y"]
+        max_x, max_y = G.nodes[first_node]["x"], G.nodes[first_node]["y"]
+
+        for node in G.nodes:
+            x = G.nodes[node]["x"]
+            y = G.nodes[node]["y"]
+
+            if x > max_x:
+                max_x = x
+
+            if x < min_x:
+                min_x = x           
+
+            if y > max_y:
+                max_y = y        
+
+            if y < min_y:
+                min_y = y 
+
+        return ((min_x, min_y), (max_x, max_y))
+
+    # does nothing - implement something?
+    def node_area(self):
+        bb = self.get_bounding_box()
+        area = (bb[1][0] - bb[0][0]) * (bb[1][1] - bb[0][1])
+
+        ideal_node_distribution = area / len(self.graph.nodes)
+        print(f"area: {area}")
+
+    def _euclidean_distance(self, a, b):
+        return math.sqrt(((b[0] - a[0])**2) + ((b[1] - a[1])**2))
+
+    def node_resolution(self):
+
+        first_node, second_node = rand.sample(list(self.graph.nodes), 2)
+        a = self.graph.nodes[first_node]['x'], self.graph.nodes[first_node]['y']
+        b = self.graph.nodes[second_node]['x'], self.graph.nodes[second_node]['y']
+
+        min_dist = self._euclidean_distance(a, b)
+        max_dist = min_dist
+        for i in self.graph.nodes:
+            for j in self.graph.nodes:
+                if i == j:
+                    continue
+                
+                a = self.graph.nodes[i]['x'], self.graph.nodes[i]['y']
+                b = self.graph.nodes[j]['x'], self.graph.nodes[j]['y']
+
+                d = self._euclidean_distance(a, b)
+                #print(d)
+
+                if d < min_dist:
+                    min_dist = d
+
+                if d > max_dist:
+                    max_dist = d
+
+        #r = 1 / math.sqrt(len(self.graph.nodes))
+        #nr = min_dist / max_dist
+        #return nr if nr > 0 else 0
+
+        return min_dist / max_dist
+
+
+    def edge_length(self):
+        """Minimize the average deviation from ideal length, as in Ahmed et al."""
+
+        ideal_edge_length = 0
+        for edge in self.graph.edges:
+            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
+            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
+            
+            ideal_edge_length += self._euclidean_distance(a, b)
+
+        
+        # For unweighted graphs, set the ideal edge length to the average edge length
+        ideal_edge_length = ideal_edge_length / self.graph.number_of_edges()
+
+        
+        edge_length_sum = 0
+
+        for edge in self.graph.edges:
+            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
+            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
+            edge_length_sum += ((self._euclidean_distance(a, b) - ideal_edge_length) / ideal_edge_length)**2
+            #edge_length_sum += (abs(self._euclidean_distance(a, b) - ideal_edge_length) / ideal_edge_length)
+
+
+        return -math.sqrt((edge_length_sum / self.graph.number_of_edges()))
+        #return 1 - (edge_length_sum / self.graph.number_of_edges())
+        #el = math.sqrt((edge_length_sum / self.graph.number_of_edges()))
+        #return 1 - el if el < 1 else 0
+        
+
 class SimulatedAnnealing():
 
     def __init__(self, graph,
@@ -807,14 +910,34 @@ class SimulatedAnnealing():
     def _step_random(self, graph):
         """Move the position of n random nodes to a new random position, where n is defined 
         in self.n_nodes_random_step"""
+        ms = MetricsSuite(graph)
+        bb = ms.get_bounding_box()
 
         for random_node in rand.sample(list(graph.nodes), self.n_nodes_random_step):
-            random_x = rand.uniform(0,1)
-            random_y = rand.uniform(0,1)
+            # random_x = rand.uniform(0,1)
+            # random_y = rand.uniform(0,1)
+            random_x = rand.uniform(bb[0][0],bb[1][0])
+            random_y = rand.uniform(bb[0][1],bb[1][1])
             graph.nodes[random_node]["x"] = random_x
             graph.nodes[random_node]["y"] = random_y
 
         return graph
+
+    def _step_swap(self, graph):
+        """Swap the position of two random nodes"""
+        a, b = rand.sample(list(graph.nodes), 2)
+        
+        temp_x, temp_y = graph.nodes[a]['x'], graph.nodes[a]['y']
+
+        graph.nodes[a]['x'], graph.nodes[a]['y'] = graph.nodes[b]['x'], graph.nodes[b]['y']
+        graph.nodes[b]['x'], graph.nodes[b]['y'] = graph.nodes[temp_x]['x'], graph.nodes[temp_y]['y']
+
+        return graph
+
+    def _step_random_bounded(self, graph, i):
+        """Move the position of n random nodes to a new random position, bounded by a circle of decreasing size, where n is defined 
+        in self.n_nodes_random_step"""
+        pass
 
 
     def multiplicative_linear(self, i):
@@ -859,7 +982,7 @@ class SimulatedAnnealing():
         self.n_accepted, self.n_total = 0, 0 # for statistical purposes
 
         for i in range(self.n_iters):
-            print(i)
+            #print(i)
             # If all the metrics are satisfactory, exit the algorithm early
             #if self._check_satisfactory(best_ms):
             #    break
@@ -870,6 +993,8 @@ class SimulatedAnnealing():
             candidate = self.next_step(candidate)
             candidate_ms = MetricsSuite(candidate, self.metrics_list, self.weights, self.mcdat)
             candidate_eval = candidate_ms.combine_metrics()
+
+            #candidate_ms.draw_graph()
 
             
 
@@ -882,6 +1007,7 @@ class SimulatedAnnealing():
 
             if candidate_eval > best_eval:
                 best, best_eval, best_ms = candidate, candidate_eval, candidate_ms
+                print(f"{i}: best")
 
 
             self.t = self.cooling_schedule(i)
@@ -1144,11 +1270,12 @@ def test16():
     nx.set_node_attributes(G, pos)
 
     #ms.draw_graph(G)
-    ms = MetricsSuite("test.graphml")
+    ms = MetricsSuite("bb.graphml")
     G = ms.graph
 
-    weights = {"edge_orthogonality":1, "edge_crossing":1, "symmetry":1, "angular_resolution":1 }
-    sa = SimulatedAnnealing("test.graphml", metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000, initial_config="load")
+    weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
+    #weights = { "node_resolution":1, "edge_length":1 }
+    sa = SimulatedAnnealing("bb.graphml", metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000, initial_config="load")
 
     G2 = sa.anneal()
 
@@ -1159,6 +1286,18 @@ def test16():
     nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
     #ms.draw_graph(G2)
     plt.show()
+
+
+def test17():
+    ms = MetricsSuite("bb2.graphml", metrics_list=["edge_crossing"])
+    #print(ms.get_bounding_box())
+    #ms.node_area()
+    #print(ms.graph.nodes)
+    # a = ms.graph.nodes['n0']['x'], ms.graph.nodes['n0']['y']
+    # b = ms.graph.nodes['n3']['x'], ms.graph.nodes['n3']['y']
+    # print(ms._euclidean_distance(a, b))
+    print(ms.node_resolution())
+    print(ms.edge_length())
 
 if __name__ == "__main__":
     test16()
