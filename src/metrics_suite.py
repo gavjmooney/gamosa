@@ -21,6 +21,7 @@ class MetricsSuite():
                         "symmetry": {"func":self.symmetry, "value":None, "weight":1},
                         "node_resolution": {"func":self.node_resolution, "value":None, "weight":1},
                         "edge_length": {"func":self.edge_length, "value":None, "weight":1},
+                        "gabriel_ratio": {"func":self.gabriel_ratio, "value":None, "weight":1},
         
         } 
         self.mcdat_dict = {"weighted_sum":self._weighted_sum,
@@ -253,7 +254,7 @@ class MetricsSuite():
                         c += 1
 
         self.metrics["edge_crossing"]["num_crossings"] = c
-        return 1 - (c / c_mx) if c_mx > 0 else 1
+        return 1 - (c / c_mx) if c_mx > 0 else 1 # c_mx < 0 when |E| <= 2
 
 
     def edge_orthogonality(self):
@@ -280,54 +281,36 @@ class MetricsSuite():
 
 
     def angular_resolution(self):
-        #print(self.graph.edges)
-        min_list = []
 
+        angles_sum = 0
         for node in self.graph.nodes:
-            adj_nodes = list(self.graph.neighbors(node))
+            ideal = 360 / self.graph.degree[node]
 
-            temp = []
-            
+            x1, y1 = self.graph.nodes[node]['x'], self.graph.nodes[node]['y']
+            actual_min = 360
 
+            for adj in self.graph.neighbors(node):
+                x2, y2 = self.graph.nodes[adj]['x'], self.graph.nodes[adj]['y']
+                angle1 = math.degrees(math.atan2((y2 - y1), (x2 - x1)))
 
-            ideal_angle = 360 / len(adj_nodes)
-
-            for adj in adj_nodes:
-                e1_source = node
-                e1_target = adj
-
-                #print((node,adj))
-
-                e1_source_x, e1_source_y = float(self.graph.nodes[node]['x']), float(self.graph.nodes[node]['y'])
-                e1_target_x, e1_target_y = float(self.graph.nodes[adj]['x']), float(self.graph.nodes[adj]['y'])
-
-                initial_angle = math.degrees(math.atan2((e1_target_y - e1_source_y), (e1_target_x - e1_source_x)))
-
-                for next_adj in adj_nodes:
-                    if next_adj == adj:
+                for adj2 in self.graph.neighbors(node):
+                    if adj == adj2:
                         continue
+                    
+                    x3, y3 = self.graph.nodes[adj2]['x'], self.graph.nodes[adj2]['y']
+                    angle2 = math.degrees(math.atan2((y3 - y1), (x3 - x1)))
 
-                    e2_source = node
-                    e2_target = next_adj
+                    diff = abs(angle1 - angle2)
 
-                    e2_source_x, e2_source_y = float(self.graph.nodes[node]['x']), float(self.graph.nodes[node]['y'])
-                    e2_target_x, e2_target_y = float(self.graph.nodes[next_adj]['x']), float(self.graph.nodes[next_adj]['y'])
+                    if diff < actual_min:
+                        actual_min = diff
 
-                    new_angle = math.degrees(math.atan2((e2_target_y - e2_source_y), (e2_target_x - e2_source_x)))
-                    diff = abs(initial_angle - new_angle)
-                    if diff != 0:
-                        temp.append(diff)
-
-            if len(temp) == 0:
-                continue
-            minimum_angle = min(temp)
-            scaled_minimum = abs((ideal_angle - minimum_angle) / ideal_angle)
-            min_list.append(scaled_minimum)
-
-        return 1 - (sum(min_list) / len(self.graph.nodes))
+            angles_sum += abs((ideal - actual_min) / ideal)
+      
+        return 1 - (angles_sum / self.graph.number_of_nodes())
 
 
-    # Doesn't work.
+
     def node_orthogonality(self):
         coord_set =[]
 
@@ -361,8 +344,7 @@ class MetricsSuite():
         max_x, max_y = self.graph.nodes[first_node]["x"], self.graph.nodes[first_node]["y"]
 
         for node in self.graph.nodes:
-            x = self.graph.nodes[node]["x"]
-            y = self.graph.nodes[node]["y"]
+            x, y = self.graph.nodes[node]["x"], self.graph.nodes[node]["y"]
 
             coord_set.append(x)
             coord_set.append(y)
@@ -548,12 +530,18 @@ class MetricsSuite():
     def _is_minor(self, node, G):
         return G.nodes[node]["type"] == "minor"
 
-    def _point_line_dist(self, gradient, y_intercept, x, y):
+    def _point_line_dist(self, gradient, y_intercept, x, y): #nathan ver
         x = gradient * float(x)
         denom = math.sqrt(gradient**2 + 1)
         return (abs(x + float(y) + float(y_intercept))) / denom
 
-    def _rel_point_line_dist(self, gradient, y_intercept, x ,y):
+    def _point_line_dist2(self, gradient, y_intercept, x ,y): #my ver
+        a = gradient
+        b = 1
+        c = y_intercept
+        return abs((a * x + b * y + c)) / (math.sqrt(a * a + b * b))
+
+    def _rel_point_line_dist(self, gradient, y_intercept, x ,y): #nathan ver
         gradient *= -1
         y_intercept *= -1
 
@@ -561,11 +549,28 @@ class MetricsSuite():
         denom = math.sqrt(gradient**2 + 1)
         return (x + float(y) + float(y_intercept)) / denom
 
-    def _same_position(self, n1, n2, G):
-        return (G.nodes[n1]["x"] == G.nodes[n2]["x"] and G.nodes[n1]["y"] == G.nodes[n2]["y"])
+    def _rel_point_line_dist2(self, gradient, y_intercept, x ,y): #my ver
+        a = gradient
+        b = 1
+        c = y_intercept
+        return (a * x + b * y + c) / (math.sqrt(a * a + b * b))
+
+    def _same_position(self, n1, n2, G, tolerance=0):
+        x1, y1 = G.nodes[n1]['x'], G.nodes[n1]['y']
+        x2, y2 = G.nodes[n2]['x'], G.nodes[n2]['y']
+
+        if tolerance == 0:
+            return (x1 == x2 and y1 == y2)
+
+        return self._in_circle(x1, y1, x2, y2, tolerance)
 
     def _is_positive(self, x):
         return x > 0
+
+    def _are_collinear(self, a, b, c, G):
+        """Returns true if the three points are collinear, by checking if the determinant is 0"""
+        return ((G.nodes[a]['x']*G.nodes[b]['y']) + (G.nodes[b]['x']*G.nodes[c]['y']) + (G.nodes[c]['x']*G.nodes[a]['y'])
+         - (G.nodes[a]['x']*G.nodes[c]['y']) - (G.nodes[b]['x']*G.nodes[a]['y']) - (G.nodes[c]['x']*G.nodes[b]['y'])) == 0
 
     def _mirror(self, axis, e1, e2, G):
         e1_p1_x, e1_p1_y = G.nodes[e1[0]]["x"], G.nodes[e1[0]]["y"]
@@ -603,8 +608,9 @@ class MetricsSuite():
             return 0
         elif self._same_position(P, X, G) and (p == 0 and x == 0):
             if abs(q) == abs(y) and (self._is_positive(q) != self._is_positive(y)):
-                # Shared node on axis but symmetric
-                return 1
+                if not self._are_collinear(Q, P, Y):                                    # ask if this logic is correct
+                    # Shared node on axis but symmetric
+                    return 1
         elif self._same_position(P, Y, G) == True and (p == 0 and y == 0):
             if abs(q) == abs(x) and (self._is_positive(q) != self._is_positive(x)):
                 # Shared node on axis but symmetric
@@ -633,16 +639,15 @@ class MetricsSuite():
             return 0
 
     def _sym_value(self, e1, e2, G):
-            P = e1[0]
-            Q = e1[1]
-            X = e2[0]
-            Y = e2[1]
+            # the end nodes of edge1 are P and Q
+            # the end nodes of edge2 are X and Y
+            P, Q, X, Y = e1[0], e1[1], e2[0], e2[1]
 
             
             if self._is_minor(P, G) == self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):
                 # P=X and Q=Y
                 return 1
-            elif self._is_minor(P, G) == self._is_minor(Y, G) and self._is_minor(X, G) == self._is_minor(Q, G):
+            elif self._is_minor(P, G) == self._is_minor(Y, G) and self._is_minor(Q, G) == self._is_minor(X, G):
                 # P=Y and X=Q
                 return 1
             elif self._is_minor(P, G) == self._is_minor(X, G) and self._is_minor(Q, G) != self._is_minor(Y, G):
@@ -657,8 +662,8 @@ class MetricsSuite():
             elif self._is_minor(P, G) != self._is_minor(Y, G) and self._is_minor(Q, G) != self._is_minor(X, G):
                 # P!=Y and Q!=X
                 return 0.25
-            elif self._is_minor(P, G) != self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):
-                return 0.5
+            # elif self._is_minor(P, G) != self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):       #extra in nathans?
+            #     return 0.5
 
     def _subgraph_to_points(self, subgraph, G):
         points = []
@@ -668,8 +673,8 @@ class MetricsSuite():
                 p1_x, p1_y = G.nodes[q[0]]["x"], G.nodes[q[0]]["y"]
                 p2_x, p2_y = G.nodes[q[1]]["x"], G.nodes[q[1]]["y"]
             
-            points.append((p1_x, p1_y))
-            points.append((p2_x, p2_y))
+                points.append((p1_x, p1_y)) #indentation bug (in nathans code this in inside only first for loop)
+                points.append((p2_x, p2_y))
 
         return points
 
@@ -707,18 +712,19 @@ class MetricsSuite():
                     if self._mirror(a, e1, e2, G) == 1:
                         num_mirror += 1
                         sym_val += self._sym_value(e1, e2, G)
-                        subgraph.append((e1, e2))
+                        subgraph.append((e1, e2))                           #check appending of this, should be appending each edge individually?
+                                                                            #can probably change this and remove subgraph_to_points func
 
-                if num_mirror >= 2 :
-                    points = self._subgraph_to_points(subgraph, G)
-                    if len(points) <= 2:
-                        break
+            if num_mirror >= 2 :                                        #check indentation of this?
+                points = self._subgraph_to_points(subgraph, G)
+                if len(points) <= 2:
+                    break
 
-                    conv_hull = ConvexHull(points, qhull_options="QJ")
-                    sub_area = conv_hull.volume
-                    total_area += sub_area
+                conv_hull = ConvexHull(points, qhull_options="QJ")
+                sub_area = conv_hull.volume
+                total_area += sub_area
 
-                    total_sym += (sym_val * sub_area) / len(subgraph)
+                total_sym += (sym_val * sub_area) / len(subgraph)
 
         whole_area_points = self._graph_to_points(G)
 
@@ -754,13 +760,6 @@ class MetricsSuite():
 
         return ((min_x, min_y), (max_x, max_y))
 
-    # does nothing - implement something?
-    def node_area(self):
-        bb = self.get_bounding_box()
-        area = (bb[1][0] - bb[0][0]) * (bb[1][1] - bb[0][1])
-
-        ideal_node_distribution = area / len(self.graph.nodes)
-        print(f"area: {area}")
 
     def _euclidean_distance(self, a, b):
         return math.sqrt(((b[0] - a[0])**2) + ((b[1] - a[1])**2))
@@ -782,7 +781,6 @@ class MetricsSuite():
                 b = self.graph.nodes[j]['x'], self.graph.nodes[j]['y']
 
                 d = self._euclidean_distance(a, b)
-                #print(d)
 
                 if d < min_dist:
                     min_dist = d
@@ -797,7 +795,35 @@ class MetricsSuite():
         return min_dist / max_dist
 
 
-    def edge_length(self):
+    def node_resolution2(self):
+        ideal_dist = 0
+        for n1 in self.graph.nodes:
+            for n2 in self.graph.nodes:
+                if n1 == n2:
+                    continue
+                a = self.graph.nodes[n1]['x'], self.graph.nodes[n1]['y']
+                b = self.graph.nodes[n2]['x'], self.graph.nodes[n2]['y']
+                
+                ideal_dist += self._euclidean_distance(a, b)
+
+        
+        ideal_dist = ideal_dist / (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1))
+        
+        dist_sum = 0
+
+        for n1 in self.graph.nodes:
+            for n2 in self.graph.nodes:
+                if n1 == n2:
+                    continue
+                a = self.graph.nodes[n1]['x'], self.graph.nodes[n1]['y']
+                b = self.graph.nodes[n2]['x'], self.graph.nodes[n2]['y']
+                dist_sum += (abs(ideal_dist - self._euclidean_distance(a, b)) / ideal_dist)
+
+
+        return 1 - (dist_sum / (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)))
+
+
+    def edge_length_old(self):
         """Minimize the average deviation from ideal length, as in Ahmed et al."""
 
         ideal_edge_length = 0
@@ -826,6 +852,92 @@ class MetricsSuite():
         #el = math.sqrt((edge_length_sum / self.graph.number_of_edges()))
         #return 1 - el if el < 1 else 0
         
+
+    def edge_length(self):
+        """Minimize the average deviation from ideal length, as in Ahmed et al."""
+
+        ideal_edge_length = 0
+        for edge in self.graph.edges:
+            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
+            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
+            
+            ideal_edge_length += self._euclidean_distance(a, b)
+
+        
+        # For unweighted graphs, set the ideal edge length to the average edge length
+        ideal_edge_length = ideal_edge_length / self.graph.number_of_edges()
+        
+        edge_length_sum = 0
+
+
+        for edge in self.graph.edges:
+            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
+            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
+            edge_length_sum += (abs(ideal_edge_length - self._euclidean_distance(a, b)) / ideal_edge_length)
+
+        return 1 - (edge_length_sum / self.graph.number_of_edges())
+
+    def _midpoint(self, a, b, G=None):
+        """Given two nodes and the graph they are in, return the midpoint between them"""
+        if G is None:
+            G = self.graph
+
+        x1, y1 = G.nodes[a]['x'], G.nodes[a]['y']
+        x2, y2 = G.nodes[b]['x'], G.nodes[b]['y']
+
+        mid_x = (x1 + x2) / 2
+        mid_y = (y1 + y2) / 2
+
+        return (mid_x, mid_y)
+
+    def _in_circle(self, x, y, center_x, center_y, r):
+        return ((x - center_x)**2 + (y - center_y)**2) < r**2
+
+    def _circles_intersect(self, x1, y1, x2, y2, r1, r2):
+        """Returns true if two circles touch or intersect."""
+        return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) <= (r1 + r2) * (r1 + r2)
+
+
+    def gabriel_ratio(self):
+        
+        # total_possible_non_conforming_nodes = 0
+        # for edge in self.graph.edges:
+        #     total_possible_non_conforming_nodes += (self.graph.number_of_nodes() - 2)
+
+        possible_non_conforming = (self.graph.number_of_edges() * self.graph.number_of_nodes()) - (self.graph.number_of_edges() * 2)
+
+        
+        num_non_conforming = 0
+
+        for edge in self.graph.edges:
+
+            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
+            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
+
+            r = self._euclidean_distance(a, b) / 2
+            center_x, center_y = self._midpoint(edge[0], edge[1])
+
+            for node in self.graph.nodes:
+                if edge[0] == node or edge[1] == node:
+                    continue
+                
+                x, y = self.graph.nodes[node]['x'], self.graph.nodes[node]['y']
+
+                if self._in_circle(x, y, center_x, center_y, r):
+                    num_non_conforming += 1
+                    # If the node is adjacent to either node in the current edge reduce total by 1,
+                    # since the nodes cannot both simultaneously be in each others circle
+                    if node in self.graph.neighbors(edge[0]):
+                        possible_non_conforming -= 1
+                    if node in self.graph.neighbors(edge[1]):
+                        possible_non_conforming -= 1 
+                    
+
+
+        return 1 - (num_non_conforming / possible_non_conforming)
+
+
+    
 
 class SimulatedAnnealing():
 
@@ -1007,7 +1119,7 @@ class SimulatedAnnealing():
 
             if candidate_eval > best_eval:
                 best, best_eval, best_ms = candidate, candidate_eval, candidate_ms
-                print(f"{i}: best")
+                #print(f"{i}: best")
 
 
             self.t = self.cooling_schedule(i)
@@ -1271,36 +1383,62 @@ def test16():
 
     #ms.draw_graph(G)
     ms = MetricsSuite("bb.graphml")
+    #ms.calculate_metric("angular_resolution")
+    #ms.pretty_print_metrics()
     G = ms.graph
 
-    weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
+    #weights = { "gabriel_ratio":1, "node_resolution":1}   
+    weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
+    # weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
     #weights = { "node_resolution":1, "edge_length":1 }
     sa = SimulatedAnnealing("bb.graphml", metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000, initial_config="load")
 
     G2 = sa.anneal()
+    
 
     fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
 
     nx.draw(G, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax2)
     
     nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
+
+    ms2 = MetricsSuite(G2, metrics_list=weights.keys())
+    ms2.calculate_metrics()
+    ms2.pretty_print_metrics()
     #ms.draw_graph(G2)
     plt.show()
 
 
 def test17():
-    ms = MetricsSuite("bb2.graphml", metrics_list=["edge_crossing"])
+    ms = MetricsSuite("angu.graphml", metrics_list=["edge_crossing"])
     #print(ms.get_bounding_box())
     #ms.node_area()
     #print(ms.graph.nodes)
     # a = ms.graph.nodes['n0']['x'], ms.graph.nodes['n0']['y']
     # b = ms.graph.nodes['n3']['x'], ms.graph.nodes['n3']['y']
     # print(ms._euclidean_distance(a, b))
-    print(ms.node_resolution())
-    print(ms.edge_length())
+    #print(ms.node_resolution())
+    #print(ms.edge_length())
+    # for edge in ms.graph.edges:
+    #     print(ms._midpoint(edge[0], edge[1]))
+    #print(ms.gabriel_ratio())
+    #print(ms.symmetry())
+    #print(ms._circles_intersect(2, 1, 4, 1, 2, 1))
+    print(ms.angular_resolution())
+
+
+def test18():
+    ms = MetricsSuite("ar.graphml")
+    #a, b, c = ms.graph.nodes
+    #print(ms._are_collinear(a,b,c,ms.graph))
+
+    # print(ms._rel_point_line_dist(-2, 4, -1, -1))
+    # print(ms._rel_point_line_dist2(-2, 4, -1, -1))
+    ms.calculate_metric("angular_resolution")
+    ms.pretty_print_metrics()
 
 if __name__ == "__main__":
-    test16()
+    test17()
 
 
     # sa = SimulatedAnnealing(nx.sedgewick_maze_graph())
