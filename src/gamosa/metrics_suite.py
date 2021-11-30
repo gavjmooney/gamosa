@@ -84,8 +84,17 @@ class MetricsSuite():
         G = G.to_undirected()
 
         for node in G.nodes:
-            G.nodes[node]['x'] = float(G.nodes[node]['x'])
-            G.nodes[node]['y'] = float(G.nodes[node]['y'])
+            try:
+                G.nodes[node]['x'] = float(G.nodes[node]['x'])
+                G.nodes[node]['y'] = float(G.nodes[node]['y'])
+            except KeyError:
+                print("Graph does not contain positional attributes. Assigning them randomly.")
+                pos = nx.random_layout(G)
+                for k,v in pos.items():
+                    pos[k] = {"x":v[0], "y":v[1]}
+
+                nx.set_node_attributes(G, pos)
+
 
         return G
 
@@ -274,16 +283,21 @@ class MetricsSuite():
 
             angle = math.degrees(math.atan(abs(gradient)))
 
-            edge_ortho = min(angle, abs(90-angle), (180-angle)) /45
+            edge_ortho = min(angle, abs(90-angle), 180-angle) /45
             ortho_list.append(edge_ortho)
 
-        return 1 - (sum(ortho_list) / len(self.graph.edges))
+        return 1 - (sum(ortho_list) / self.graph.number_of_edges())
 
 
-    def angular_resolution(self):
+    def angular_resolution(self, all_nodes=False):
 
         angles_sum = 0
+        nodes_count = 0
         for node in self.graph.nodes:
+            if self.graph.degree[node] <= 1:
+                continue
+
+            nodes_count += 1
             ideal = 360 / self.graph.degree[node]
 
             x1, y1 = self.graph.nodes[node]['x'], self.graph.nodes[node]['y']
@@ -300,19 +314,18 @@ class MetricsSuite():
                     x3, y3 = self.graph.nodes[adj2]['x'], self.graph.nodes[adj2]['y']
                     angle2 = math.degrees(math.atan2((y3 - y1), (x3 - x1)))
 
-                    diff = abs(angle1 - angle2)
+                    diff = abs(angle2 - angle1)
 
                     if diff < actual_min:
                         actual_min = diff
 
             angles_sum += abs((ideal - actual_min) / ideal)
-      
-        return 1 - (angles_sum / self.graph.number_of_nodes())
+
+        return 1 - (angles_sum / self.graph.number_of_nodes()) if all_nodes else 1 - (angles_sum / nodes_count)
 
 
     def crossing_angle(self):
         G = self.crosses_promotion()
-        self.draw_graph(G)
 
         angles_sum = 0
         num_minor_nodes = 0
@@ -342,12 +355,12 @@ class MetricsSuite():
 
                     if diff < actual_min:
                         actual_min = diff
-            print(actual_min)
+
             angles_sum += abs((ideal - actual_min) / ideal)
-        print(num_minor_nodes)
+
         return 1 - (angles_sum / num_minor_nodes) if num_minor_nodes > 0 else 1
 
-
+    # not sure i'm happy with this
     def node_orthogonality(self):
         coord_set =[]
 
@@ -371,7 +384,7 @@ class MetricsSuite():
         # Adjust graph so node with minimum coordinates is at 0,0
         for node in self.graph.nodes:
             self.graph.nodes[node]["x"] = float(self.graph.nodes[node]["x"]) - x_distance
-            self.graph.nodes[node]["y"]= float(self.graph.nodes[node]["y"]) - y_distance
+            self.graph.nodes[node]["y"] = float(self.graph.nodes[node]["y"]) - y_distance
 
 
         # first_node = 0
@@ -402,11 +415,18 @@ class MetricsSuite():
 
         h = abs(max_y - min_y)
         w = abs(max_x - min_x)
+        #print(h)
+        #print(w)
 
         reduced_h = h / gcd
         reduced_w = w / gcd
 
-        return len(self.graph.nodes) / ((reduced_w+1) * (reduced_h+1))
+        #print(reduced_h)
+        #print(reduced_w)
+        A = ((reduced_w+1) * (reduced_h+1))
+        #print(A)
+
+        return len(self.graph.nodes) / A
 
 
     def _add_crossing_node(self, l1, l2, G, e, e2):
@@ -464,18 +484,15 @@ class MetricsSuite():
         while crossing_count != num_crossings:
             crossing_found = False
 
-
             edges = crosses_promoted_G.edges
-
 
             for e in edges:
                 if e in second_covered:
                     continue
                     
-                source, target = e[0], e[1]
 
-                source_node = crosses_promoted_G.nodes[source]
-                target_node = crosses_promoted_G.nodes[target]
+                source_node = crosses_promoted_G.nodes[e[0]]
+                target_node = crosses_promoted_G.nodes[e[1]]
                 
                 l1_p1_x = source_node["x"]
                 l1_p1_y = source_node["y"]
@@ -490,13 +507,9 @@ class MetricsSuite():
                 for e2 in edges:
                     if e == e2:
                         continue
-
-                    source2 = e2[0]
-                    target2 = e2[1]
-
                     
-                    source2_node = crosses_promoted_G.nodes[source2]
-                    target2_node = crosses_promoted_G.nodes[target2]
+                    source2_node = crosses_promoted_G.nodes[e2[0]]
+                    target2_node = crosses_promoted_G.nodes[e2[1]]
 
                     l2_p1_x = source2_node["x"]
                     l2_p1_y = source2_node["y"]
@@ -520,7 +533,6 @@ class MetricsSuite():
                 if crossing_found:
                     break
         
-        # What to do about saving crosses promoted graph? How will this work with other metrics?
         self.graph_cross_promoted = crosses_promoted_G
         return crosses_promoted_G
     
@@ -645,22 +657,22 @@ class MetricsSuite():
             return 0
         elif self._same_position(P, X, G) and (p == 0 and x == 0):
             if abs(q) == abs(y) and (self._is_positive(q) != self._is_positive(y)):
-                if not self._are_collinear(Q, P, Y):                                    # ask if this logic is correct
+                if not self._are_collinear(Q, P, Y, G):                                    # ask if this logic is correct
                     # Shared node on axis but symmetric
                     return 1
         elif self._same_position(P, Y, G) == True and (p == 0 and y == 0):
             if abs(q) == abs(x) and (self._is_positive(q) != self._is_positive(x)):
-                if not self._are_collinear(Q, P, X):  
+                if not self._are_collinear(Q, P, X, G):  
                     # Shared node on axis but symmetric
                     return 1
         elif self._same_position(Q, Y, G) == True and (q == 0 and y == 0):
             if abs(p) == abs(x) and (self._is_positive(x) != self._is_positive(p)):
-                if not self._are_collinear(P, Q, X): 
+                if not self._are_collinear(P, Q, X, G): 
                     # Shared node on axis but symmetric
                     return p
         elif self._same_position(Q, X, G) and (q == 0 and x == 0):
             if abs(p) == abs(y) and (self._is_positive(p) != self._is_positive(y)):
-                if not self._are_collinear(P, Q, Y):
+                if not self._are_collinear(P, Q, Y, G):
                     # Shared node on axis but symmetric
                     return 1
         elif self._is_positive(p) != self._is_positive(q):
@@ -977,480 +989,9 @@ class MetricsSuite():
         return 1 - (num_non_conforming / possible_non_conforming)
 
 
-    
 
-class SimulatedAnnealing():
-
-    def __init__(self, graph,
-                        metrics_list=None, weights=None, mcdat="weighted_sum", 
-                        initial_config="random",
-                        cooling_schedule="linear_a",
-                        t_min=0,
-                        t_max=100,
-                        alpha=0.8,
-                        next_step="random",
-                        n_nodes_random_step=1,
-                        n_iters=1000,
-                        ):
-        
-        self.initial_configs = {"random":self._initial_random,
-                                "load":self._initial_load,
-                                #"x_align":self._inital_x_align,
-        }
-
-        self.next_steps = {"random":self._step_random,
-                                #"load":self._step_random2,
-                                #"x_align":self.something,
-        }
-
-        self.cooling_schedules = {"linear_a":self.additive_linear,
-                                "linear_m":self.multiplicative_linear,
-                                "quadratic_a":self.additive_quadratic,
-                                "quadratic_m":self.multiplicative_quadratic,
-                                "exponential":self.multiplicative_exponential,
-                                "logarithmic":self.multiplicative_logarithmic,
-        }
-
-        # Check paramaters are valid
-        assert initial_config in self.initial_configs, f"Unkown choice for initial_config: {initial_config}. Available choices: {list(self.initial_configs.keys())}"
-        assert next_step in self.next_steps, f"Unkown choice for next_step: {next_step}. Available choices: {list(self.next_steps.keys())}"
-        assert cooling_schedule in self.cooling_schedules, f"Unkown cooling_schedule: {cooling_schedule}. Available cooling schedules: {list(self.cooling_schedules.keys())}"
-        
-        graph_loader = MetricsSuite(graph)
-        self.graph = graph_loader.graph
-        if metrics_list is None:
-            self.metrics_list = ["edge_crossing"]
-        else:
-            self.metrics_list = metrics_list
-        self.weights = weights
-        self.mcdat = mcdat
-
-        self.initial_config = self.initial_configs[initial_config](self.graph)
-        self.next_step = self.next_steps[next_step]
-        self.cooling_schedule = self.cooling_schedules[cooling_schedule]
-       
-        self.t = t_max
-        self.t_max = t_max
-        self.t_min = t_min
-        self.n_iters = n_iters
-        self.alpha = alpha
-
-        self.n_nodes_random_step = n_nodes_random_step
-
-    def _initial_load(self, graph):
-        """Use the coordinates of a loaded graph drawing as the initial positions. Existing drawings 
-        should already have positions assigned to nodes."""
-
-        for node, attributes in graph.nodes(data=True):
-            assert 'x' in attributes, f"Error: No X coordinate for node: {node}"
-            assert 'y' in attributes, f"Error: No Y coordinate for node: {node}"
-
-        return graph
-        
-
-    def _initial_random(self, graph):
-        """Assign nodes to random positions as the initial layout for the algorithm."""
-
-        pos = nx.random_layout(graph)
-        for k,v in pos.items():
-            pos[k] = {"x":v[0], "y":v[1]}
-
-        nx.set_node_attributes(graph, pos)
-
-        return graph
-
-    def _step_random(self, graph):
-        """Move the position of n random nodes to a new random position, where n is defined 
-        in self.n_nodes_random_step"""
-        ms = MetricsSuite(graph)
-        bb = ms.get_bounding_box()
-
-        for random_node in rand.sample(list(graph.nodes), self.n_nodes_random_step):
-            # random_x = rand.uniform(0,1)
-            # random_y = rand.uniform(0,1)
-            random_x = rand.uniform(bb[0][0],bb[1][0])
-            random_y = rand.uniform(bb[0][1],bb[1][1])
-            graph.nodes[random_node]["x"] = random_x
-            graph.nodes[random_node]["y"] = random_y
-
-        return graph
-
-    def _step_swap(self, graph):
-        """Swap the position of two random nodes"""
-        a, b = rand.sample(list(graph.nodes), 2)
-        
-        temp_x, temp_y = graph.nodes[a]['x'], graph.nodes[a]['y']
-
-        graph.nodes[a]['x'], graph.nodes[a]['y'] = graph.nodes[b]['x'], graph.nodes[b]['y']
-        graph.nodes[b]['x'], graph.nodes[b]['y'] = graph.nodes[temp_x]['x'], graph.nodes[temp_y]['y']
-
-        return graph
-
-    def _step_random_bounded(self, graph, i):
-        """Move the position of n random nodes to a new random position, bounded by a circle of decreasing size, where n is defined 
-        in self.n_nodes_random_step"""
-        pass
-
-
-    def multiplicative_linear(self, i):
-        return self.t_max / (1 + self.alpha * i)
-
-    def additive_linear(self, i):
-        return self.t_min + (self.t_max - self.t_min) * ((self.n_iters - i) / self.n_iters)
-
-    def multiplicative_quadratic(self, i):
-        return self.t_max / (1 + self.alpha * i**2)
-
-    def additive_quadratic(self, i):
-        return self.t_min + (self.t_max - self.t_min) * ((self.n_iters - i) / self.n_iters)**2
-
-    def multiplicative_exponential(self, i):
-        return self.t_max * self.alpha**i
-
-    def multiplicative_logarithmic(self, i):
-        return self.t_max / (self.alpha * math.log(i + 1))
-
-    def _check_satisfactory(self, ms, satisfactory_level=1):
-        """Check the condition of current metrics compared to a defined level."""
-        # Possibly refactor to allow for different levels for each metric
-        num_metrics = len(self.metrics_list)
-        num_perfect_metrics = 0
-        for metric in self.metrics_list:
-            if ms.metrics[metric]["value"] >= satisfactory_level:
-                num_perfect_metrics += 1
-
-        return num_perfect_metrics == num_metrics
-
-
-
-    def anneal(self):
-        best_ms = MetricsSuite(self.initial_config, self.metrics_list, self.weights, self.mcdat)
-        best = self.initial_config.copy()
-        best_eval = best_ms.combine_metrics()
-        self.initial_eval = best_eval
-
-        curr, curr_eval = best, best_eval
-
-        self.n_accepted, self.n_total = 0, 0 # for statistical purposes
-
-        for i in range(self.n_iters):
-            #print(i)
-            # If all the metrics are satisfactory, exit the algorithm early
-            #if self._check_satisfactory(best_ms):
-            #    break
-
-            self.n_total += 1
-            
-            candidate = best.copy()
-            candidate = self.next_step(candidate)
-            candidate_ms = MetricsSuite(candidate, self.metrics_list, self.weights, self.mcdat)
-            candidate_eval = candidate_ms.combine_metrics()
-
-            #candidate_ms.draw_graph()
-
-            
-
-            diff = candidate_eval - curr_eval
-            #print(f"{rand.random()} < {math.exp(-diff/self.t)}")
-            if rand.random() < math.exp(-diff/self.t): # possibly make this yet another parameter?
-                curr, curr_eval = candidate, candidate_eval
-                self.n_accepted += 1
-                
-
-            if candidate_eval > best_eval:
-                best, best_eval, best_ms = candidate, candidate_eval, candidate_ms
-                #print(f"{i}: best")
-
-
-            self.t = self.cooling_schedule(i)
-           
-        print(f"Acceptance rate: {self.n_accepted/self.n_total if self.n_total > 0 else 0}")
-        print(f"Initial eval: {self.initial_eval}")
-        print(f"Best eval after {self.n_total} iterations: {best_eval}")
-        return best
-
-    def plot_temperatures(self):
-
-        num_axis = len(self.cooling_schedules.keys())
-        axis = [None for i in range(num_axis)]  
-
-        num_rows = math.ceil(math.sqrt(num_axis))
-        num_cols = math.ceil(num_axis/num_rows)
-
-        plt.figure(constrained_layout=True)
-        plt.xlabel('Iteration')
-        plt.ylabel('Temperature')
-
-        for i, cs in enumerate(self.cooling_schedules):
-            
-            iterations = [j for j in range(self.n_iters)]
-            temperatures = []
-            t = self.t_max
-            for n in iterations:
-                t = self.cooling_schedules[cs](n+1)
-                temperatures.append(t)
-
-            
-
-            plt.subplot(int(str(num_rows)+ str(num_cols) + str(i+1)))
-            plt.plot(iterations, temperatures)
-            plt.title(cs)
-            
-        plt.suptitle('Cooling Schedules')
-        plt.show()
-
-
-
-def test0():
-    ms = MetricsSuite("test.graphml")
-
-    #nx.draw(ms.graph)
-    #plt.show()
-    print(ms.graph)
-    print()
-
-    print(ms.graph.nodes(data=True))
-
-    G = nx.sedgewick_maze_graph()
-    pos = nx.random_layout(G)
-    nx.set_node_attributes(G, pos, "pos")
-
-    print()
-
-    print(G.nodes(data=True))
-
-def test1():
-    G = nx.sedgewick_maze_graph()
-    pos = nx.random_layout(G)
-    nx.set_node_attributes(G, pos, "pos")
-
-    ms = MetricsSuite(G)
-
-    ms.calculate_metric("edge_orthogonality")
-    #ms.calculate_metric("edge_crossing")
-
-    for k,v in ms.metrics.items():
-        print(f"{k}: {v['value']}")
-
-def test2():
-    G = nx.sedgewick_maze_graph()
-
-    sa = SimulatedAnnealing(G, metrics_list=["node_orthogonality"], cooling_schedule="linear_m", n_iters=1000)
-
-    G2 = sa.anneal()
-
-    fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
-
-    nx.draw(G, pos={k:v["pos"] for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax2)
-    nx.draw(G2, pos={k:v["pos"] for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
-
-    plt.show()
-
-def test3():
-    G = nx.sedgewick_maze_graph()
-    pos = nx.random_layout(G)
-    nx.set_node_attributes(G, pos, "pos")
-
-    ms = MetricsSuite(G)
-
-    ms.calculate_metric("edge_orthogonality")
-    #ms.calculate_metric("edge_crossing")
-
-    for k,v in ms.metrics.items():
-        print(f"{k}: {v['value']}")
-
-    ms.draw_graph()
-
-    ########################
-    G = nx.sedgewick_maze_graph()
-    pos = nx.bipartite_layout(G, G.nodes)
-    nx.set_node_attributes(G, pos, "pos")
-
-    ms = MetricsSuite(G)
-
-    ms.calculate_metric("edge_orthogonality")
-    #ms.calculate_metric("edge_crossing")
-
-    for k,v in ms.metrics.items():
-        print(f"{k}: {v['value']}")
-
-    ms.draw_graph()
-
-def test4():
-    G = nx.sedgewick_maze_graph()
-
-    weights = {"edge_crossing":1, "edge_orthogonality":1}
-    sa = SimulatedAnnealing(G, metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000)
-
-    G2 = sa.anneal()
-
-    fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
-
-    nx.draw(G, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax2)
-    nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
-
-    plt.show()
-
-def test5():
-    G = nx.sedgewick_maze_graph()
-    #pos = nx.random_layout(G)
-    pos = nx.bipartite_layout(G, G.nodes)
-    nx.set_node_attributes(G, pos, "pos")
-
-    ms = MetricsSuite(G)
-
-    print(G.nodes(data=True))
-
-    fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
-
-    nx.draw(G, pos={k:v["pos"] for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax2)
-    
-
-    ms.calculate_metric("node_orthogonality")
-
-    print(G.nodes(data=True))
-    #ms.calculate_metric("edge_crossing")
-
-    nx.draw(G, pos={k:v["pos"] for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax3)
-
-    plt.show()
-
-    for k,v in ms.metrics.items():
-        print(f"{k}: {v['value']}")
-
-
-def test7():
-
-
-    sa = SimulatedAnnealing("test.graphml", metrics_list=["edge_crossing", "edge_orthogonality"], cooling_schedule="linear_m", n_iters=1000)
-
-    G2 = sa.anneal()
-
-    ms = MetricsSuite(G2)
-
-    ms.write_graph("new.graphml", G2)
-
-    ms.draw_graph()
-
-
-def test8():
-    
-
-    ms = MetricsSuite("test.graphml")
-    ms.draw_graph()
-
-    ms.write_graph("out.graphml")
-
-
-def test9():
-    sa = SimulatedAnnealing("test.graphml", initial_config="load")
-
-    g = sa.anneal()
-
-    ms = MetricsSuite(g)
-
-    ms.draw_graph()
-
-
-def test10():
-    ms = MetricsSuite("test.graphml", metrics_list=["angular_resolution"])
-    ms.calculate_metric("angular_resolution")
-
-    ms.pretty_print_metrics()
-
-def test11():
-    sa = SimulatedAnnealing("ar2.graphml", initial_config="load", metrics_list=["edge_orthogonality", "edge_crossing", "angular_resolution"])
-    #sa = SimulatedAnnealing("test.graphml", initial_config="load", metrics_list=["edge_crossing"])
-
-    g = sa.anneal()
-
-    ms = MetricsSuite(g, metrics_list=["edge_orthogonality", "edge_crossing", "angular_resolution"])
-    
-
-    #ms.calculate_metrics()
-    #ms.pretty_print_metrics()
-
-    ms.draw_graph()
-
-    #ms.write_graph("wtf.graphml")
-
-
-def test12():
-
-    ms = MetricsSuite("test.graphml", metrics_list=["edge_crossing"])
-    ms.draw_graph()
-
-    sa = SimulatedAnnealing(ms.graph)
-    ms.calculate_metrics()
-    ms.pretty_print_metrics()
-
-    print(ms.metrics["edge_crossing"]["num_crossings"])
-
-    print(ms.graph.edges)
-    print(ms.graph.edges())
-
-
-def test13():
-    ms = MetricsSuite("test.graphml", metrics_list=["edge_crossing"])
-    ms.draw_graph()
-
-    ms.crosses_promotion()
-
-    ms.draw_graph(ms.graph_cross_promoted)
-    ms.write_graph("newone.graphml", ms.graph_cross_promoted)
-
-    ms.pretty_print_nodes(ms.graph_cross_promoted)
-
-def test14():
-    ms = MetricsSuite("test.graphml", metrics_list=["edge_crossing"])
-
-    print(ms._find_bisectors(ms.graph))
-
-
-def test15():
-    ms = MetricsSuite("ar.graphml", metrics_list=["edge_crossing"])
-
-    print(ms.symmetry())
-
-def test16():
-    G = nx.sedgewick_maze_graph()
-    #ms = MetricsSuite(G)
-    pos = nx.random_layout(G)
-    for k,v in pos.items():
-        pos[k] = {"x":v[0], "y":v[1]}
-
-    nx.set_node_attributes(G, pos)
-
-    #ms.draw_graph(G)
-    ms = MetricsSuite("bb.graphml")
-    #ms.calculate_metric("angular_resolution")
-    #ms.pretty_print_metrics()
-    G = ms.graph
-
-    #weights = { "gabriel_ratio":1, "node_resolution":1}   
-    weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
-    # weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
-    #weights = { "node_resolution":1, "edge_length":1 }
-    sa = SimulatedAnnealing("bb.graphml", metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000, initial_config="load")
-
-    G2 = sa.anneal()
-    
-
-    fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
-
-    nx.draw(G, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax2)
-    
-    nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
-
-    ms2 = MetricsSuite(G2, metrics_list=weights.keys())
-    ms2.calculate_metrics()
-    ms2.pretty_print_metrics()
-    #ms.draw_graph(G2)
-    plt.show()
-
-
-def test17():
-    ms = MetricsSuite("angu.graphml", metrics_list=["edge_crossing"])
+if __name__ == "__main__":
+    ms = MetricsSuite("..\\..\\graphs\\moon\\test_6_5_NR05.graphml", metrics_list=["edge_crossing"])
     #print(ms.get_bounding_box())
     #ms.node_area()
     #print(ms.graph.nodes)
@@ -1465,29 +1006,9 @@ def test17():
     #print(ms.symmetry())
     #print(ms._circles_intersect(2, 1, 4, 1, 2, 1))
     #print(ms.angular_resolution())
-    print(ms.crossing_angle())
-
-
-def test18():
-    ms = MetricsSuite("ar.graphml")
-    #a, b, c = ms.graph.nodes
-    #print(ms._are_collinear(a,b,c,ms.graph))
-
-    # print(ms._rel_point_line_dist(-2, 4, -1, -1))
-    # print(ms._rel_point_line_dist2(-2, 4, -1, -1))
-    ms.calculate_metric("angular_resolution")
-    ms.pretty_print_metrics()
-
-if __name__ == "__main__":
-    test17()
-
-
-    # sa = SimulatedAnnealing(nx.sedgewick_maze_graph())
-    # sa.plot_temperatures()
-
-    # ms = MetricsSuite("test.graphml")
-    # print(ms._find_positive(4225))
+    print(ms.node_orthogonality())
     #ms.draw_graph()
+    #print(ms.crossing_angle())
 
 
 
