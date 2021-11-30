@@ -943,7 +943,7 @@ class MetricsSuite():
         return (mid_x, mid_y)
 
     def _in_circle(self, x, y, center_x, center_y, r):
-        return ((x - center_x)**2 + (y - center_y)**2) < r**2
+        return ((x - center_x)**2 + (y - center_y)**2) <= r**2
 
     def _circles_intersect(self, x1, y1, x2, y2, r1, r2):
         """Returns true if two circles touch or intersect."""
@@ -991,7 +991,8 @@ class MetricsSuite():
 
 
 if __name__ == "__main__":
-    ms = MetricsSuite("..\\..\\graphs\\moon\\test_6_5_NR05.graphml", metrics_list=["edge_crossing"])
+    #ms = MetricsSuite("..\\..\\graphs\\moon\\test_6_5_NR05.graphml", metrics_list=["edge_crossing"])
+    ms = MetricsSuite("..\\..\\graphs\\moon\\test_gr.graphml", metrics_list=["edge_crossing"])
     #print(ms.get_bounding_box())
     #ms.node_area()
     #print(ms.graph.nodes)
@@ -1006,7 +1007,7 @@ if __name__ == "__main__":
     #print(ms.symmetry())
     #print(ms._circles_intersect(2, 1, 4, 1, 2, 1))
     #print(ms.angular_resolution())
-    print(ms.node_orthogonality())
+    print(ms.gabriel_ratio())
     #ms.draw_graph()
     #print(ms.crossing_angle())
 
