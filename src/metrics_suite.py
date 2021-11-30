@@ -310,6 +310,43 @@ class MetricsSuite():
         return 1 - (angles_sum / self.graph.number_of_nodes())
 
 
+    def crossing_angle(self):
+        G = self.crosses_promotion()
+        self.draw_graph(G)
+
+        angles_sum = 0
+        num_minor_nodes = 0
+        for node in G.nodes:
+            if not self._is_minor(node, G):
+                continue
+            
+            num_minor_nodes += 1
+            ideal = 360 / G.degree[node]
+            
+
+            x1, y1 = G.nodes[node]['x'], G.nodes[node]['y']
+            actual_min = 360
+
+            for adj in G.neighbors(node):
+                x2, y2 = G.nodes[adj]['x'], G.nodes[adj]['y']
+                angle1 = math.degrees(math.atan2((y2 - y1), (x2 - x1)))
+
+                for adj2 in G.neighbors(node):
+                    if adj == adj2:
+                        continue
+                    
+                    x3, y3 = G.nodes[adj2]['x'], G.nodes[adj2]['y']
+                    angle2 = math.degrees(math.atan2((y3 - y1), (x3 - x1)))
+
+                    diff = abs(angle1 - angle2)
+
+                    if diff < actual_min:
+                        actual_min = diff
+            print(actual_min)
+            angles_sum += abs((ideal - actual_min) / ideal)
+        print(num_minor_nodes)
+        return 1 - (angles_sum / num_minor_nodes) if num_minor_nodes > 0 else 1
+
 
     def node_orthogonality(self):
         coord_set =[]
@@ -613,16 +650,19 @@ class MetricsSuite():
                     return 1
         elif self._same_position(P, Y, G) == True and (p == 0 and y == 0):
             if abs(q) == abs(x) and (self._is_positive(q) != self._is_positive(x)):
-                # Shared node on axis but symmetric
-                return 1
+                if not self._are_collinear(Q, P, X):  
+                    # Shared node on axis but symmetric
+                    return 1
         elif self._same_position(Q, Y, G) == True and (q == 0 and y == 0):
             if abs(p) == abs(x) and (self._is_positive(x) != self._is_positive(p)):
-                # Shared node on axis but symmetric
-                return p
+                if not self._are_collinear(P, Q, X): 
+                    # Shared node on axis but symmetric
+                    return p
         elif self._same_position(Q, X, G) and (q == 0 and x == 0):
             if abs(p) == abs(y) and (self._is_positive(p) != self._is_positive(y)):
-                # Shared node on axis but symmetric
-                return 1
+                if not self._are_collinear(P, Q, Y):
+                    # Shared node on axis but symmetric
+                    return 1
         elif self._is_positive(p) != self._is_positive(q):
             # Edge crosses axis
             return 0
@@ -1424,7 +1464,8 @@ def test17():
     #print(ms.gabriel_ratio())
     #print(ms.symmetry())
     #print(ms._circles_intersect(2, 1, 4, 1, 2, 1))
-    print(ms.angular_resolution())
+    #print(ms.angular_resolution())
+    print(ms.crossing_angle())
 
 
 def test18():
