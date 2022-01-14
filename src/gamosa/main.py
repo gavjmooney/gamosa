@@ -9,16 +9,17 @@ from tests import *
 
 def main():
 
-    filename = "..\\..\\graphs\\rome\\grafo122.12.graphml"
+    filename = "..\\..\\graphs\\moon\\ca.graphml"
 
     ms = MetricsSuite(filename)
     #ms.calculate_metric("angular_resolution")
     #ms.pretty_print_metrics()
     G = ms.graph
 
+    weights = { "edge_crossing":1}   
     #weights = { "angular_resolution":1, "edge_length":1}   
     #weights = { "gabriel_ratio":1, "node_resolution":1}   
-    weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
+    #weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
     # weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
     #weights = { "node_resolution":1, "edge_length":1 }
     sa = SimulatedAnnealing(filename, metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000, initial_config="load")

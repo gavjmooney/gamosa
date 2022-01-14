@@ -51,6 +51,23 @@ class TestMetricsSuiteEdgeCrossing(unittest.TestCase):
         ms.calculate_metric("edge_crossing")
 
         self.assertEqual(1, ms.metrics["edge_crossing"]["value"])
+        self.assertEqual(0, ms.metrics["edge_crossing"]["num_crossings"])
+
+    def test_ec0(self):
+        filename = PATH + "test_4_4_EC0_CA1.graphml"
+        ms = MetricsSuite(filename, metrics_list=["edge_crossing"])
+        ms.calculate_metric("edge_crossing")
+
+        self.assertEqual(0, ms.metrics["edge_crossing"]["value"])
+        self.assertEqual(1, ms.metrics["edge_crossing"]["num_crossings"])
+
+    def test_ec06(self):
+        filename = PATH + "test_8_7_EC06.graphml"
+        ms = MetricsSuite(filename, metrics_list=["edge_crossing"])
+        ms.calculate_metric("edge_crossing")
+
+        self.assertEqual(0.6, ms.metrics["edge_crossing"]["value"])
+        self.assertEqual(6, ms.metrics["edge_crossing"]["num_crossings"])
 
 
 class TestMetricsSuiteAngularResolution(unittest.TestCase):
@@ -79,8 +96,34 @@ class TestMetricsSuiteAngularResolution(unittest.TestCase):
 
 
 class TestMetricsSuiteNodeResolution(unittest.TestCase):
-    pass
 
+    def test_nr_055(self):
+        filename = PATH + "test_3_2_NR055.graphml"
+        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms.calculate_metric("node_resolution")
+
+        self.assertAlmostEqual(0.55, ms.metrics["node_resolution"]["value"], 2)
+
+    def test_nr_1(self):
+        filename = PATH + "test_3_3_NR1.graphml"
+        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms.calculate_metric("node_resolution")
+
+        self.assertAlmostEqual(1, ms.metrics["node_resolution"]["value"], 2)
+
+    def test_nr_05(self):
+        filename = PATH + "test_3_2_NR05.graphml"
+        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms.calculate_metric("node_resolution")
+
+        self.assertAlmostEqual(0.5, ms.metrics["node_resolution"]["value"], 2)
+
+    def test_nr_0217(self):
+        filename = PATH + "test_3_2_NR0217.graphml"
+        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms.calculate_metric("node_resolution")
+
+        self.assertAlmostEqual(0.217, ms.metrics["node_resolution"]["value"], 2)       
 
 class TestMetricsSuiteEdgeLength(unittest.TestCase):
 
@@ -186,6 +229,38 @@ class TestMetricsSuiteGabrielRatio(unittest.TestCase):
         ms.calculate_metric("gabriel_ratio")
 
         self.assertAlmostEqual(0.83, ms.metrics["gabriel_ratio"]["value"], 2)
+
+
+class TestMetricsSuiteCrossingAngle(unittest.TestCase):
+    
+    def test_ca1(self):
+        filename = PATH + "test_4_4_EC0_CA1.graphml"
+        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms.calculate_metric("crossing_angle")
+
+        self.assertEqual(1, ms.metrics["crossing_angle"]["value"])
+
+    def test_ca2(self):
+        filename = PATH + "test_7_7_CA1.graphml"
+        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms.calculate_metric("crossing_angle")
+
+        self.assertEqual(1, ms.metrics["crossing_angle"]["value"])
+
+    def test_ca05(self):
+        filename = PATH + "test_4_3_CA05.graphml"
+        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms.calculate_metric("crossing_angle")
+
+        self.assertEqual(0.5, ms.metrics["crossing_angle"]["value"])
+
+    def test_ca057(self):
+        filename = PATH + "test_4_3_CA057.graphml"
+        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms.calculate_metric("crossing_angle")
+
+        self.assertAlmostEqual(0.57, ms.metrics["crossing_angle"]["value"], 2)
+
 
 
 class TestMetricsSuiteCombinations(unittest.TestCase):
