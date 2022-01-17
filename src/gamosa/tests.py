@@ -158,6 +158,14 @@ class TestMetricsSuiteSymmetry(unittest.TestCase):
 
         self.assertEqual(1, ms.metrics["symmetry"]["value"])
 
+    def test_sym_tolerance(self):
+        filename = PATH + "test_4_4_SYM025-075.graphml"
+        ms = MetricsSuite(filename, metrics_list=["symmetry"])
+
+        self.assertEqual(0, ms.symmetry())
+        self.assertAlmostEqual(0.25, ms.symmetry(threshold=1), 2)
+        self.assertAlmostEqual(0.75, ms.symmetry(threshold=1, tolerance=1), 2)
+
 
 class TestMetricsSuiteEdgeOrthogonality(unittest.TestCase):
 

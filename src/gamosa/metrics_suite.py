@@ -47,6 +47,7 @@ class MetricsSuite():
         elif isinstance(graph, str):
             self.graph = self.load_graph(graph)
         else:
+            # TODO: Should check that it is nx graph explicitly and throw error otherwise
             self.graph = graph
 
         if weights:
@@ -349,7 +350,7 @@ class MetricsSuite():
 
         return 1 - (angles_sum / num_minor_nodes) if num_minor_nodes > 0 else 1
 
-    # not sure i'm happy with this
+
     def node_orthogonality(self):
         coord_set =[]
 
@@ -374,7 +375,6 @@ class MetricsSuite():
         for node in self.graph.nodes:
             self.graph.nodes[node]["x"] = float(self.graph.nodes[node]["x"]) - x_distance
             self.graph.nodes[node]["y"] = float(self.graph.nodes[node]["y"]) - y_distance
-
 
         # first_node = 0
         first_node = rand.sample(list(self.graph.nodes), 1)[0]
@@ -404,16 +404,11 @@ class MetricsSuite():
 
         h = abs(max_y - min_y)
         w = abs(max_x - min_x)
-        #print(h)
-        #print(w)
 
         reduced_h = h / gcd
         reduced_w = w / gcd
 
-        print(reduced_h)
-        print(reduced_w)
         A = ((reduced_w+1) * (reduced_h+1))
-        print(A)
 
         return len(self.graph.nodes) / A
 
@@ -619,6 +614,82 @@ class MetricsSuite():
          - (G.nodes[a]['x']*G.nodes[c]['y']) - (G.nodes[b]['x']*G.nodes[a]['y']) - (G.nodes[c]['x']*G.nodes[b]['y'])) == 0
 
 
+    # def _mirror(self, axis, e1, e2, G, tolerance=0):
+    #     e1_p1_x, e1_p1_y = G.nodes[e1[0]]["x"], G.nodes[e1[0]]["y"]
+    #     e1_p2_x, e1_p2_y = G.nodes[e1[1]]["x"], G.nodes[e1[1]]["y"]
+
+    #     e2_p1_x, e2_p1_y = G.nodes[e2[0]]["x"], G.nodes[e2[0]]["y"]
+    #     e2_p2_x, e2_p2_y = G.nodes[e2[1]]["x"], G.nodes[e2[1]]["y"]
+
+    #     P, Q, X, Y = e1[0], e1[1], e2[0], e2[1]
+
+    #     if axis[0] == "x":
+    #         p = axis[1] - e1_p1_y
+    #         q = axis[1] - e1_p2_y
+    #         x = axis[1] - e2_p1_y
+    #         y = axis[1] - e2_p2_y
+    #     elif axis[0] == "y":
+    #         p = axis[1] - e1_p1_x
+    #         q = axis[1] - e1_p2_x
+    #         x = axis[1] - e2_p1_x
+    #         y = axis[1] - e2_p2_x
+    #     else:
+    #         p = self._rel_point_line_dist(axis[0], axis[1], e1_p1_x, e1_p1_y)
+    #         q = self._rel_point_line_dist(axis[0], axis[1], e1_p2_x, e1_p2_y)
+    #         x = self._rel_point_line_dist(axis[0], axis[1], e2_p1_x, e2_p1_y)
+    #         y = self._rel_point_line_dist(axis[0], axis[1], e2_p2_x, e2_p2_y)
+
+    #     print(str(p)+" "+str(q)+" "+str(x)+" "+str(y))
+    #     if e1 == e2:
+    #         # Same edge
+    #         return 0
+    #     elif p == 0 and q == 0:
+    #         # Edge on axis
+    #         return 0
+    #     elif y == 0 and x == 0:
+    #         # Edge on other axis
+    #         return 0
+    #     elif self._same_position(P, X, G, tolerance) and (p == 0 and x == 0):
+    #         print("a")
+    #         if abs(q) == abs(y) and (self._is_positive(q) != self._is_positive(y)):
+    #             if not self._are_collinear(Q, P, Y, G):
+    #                 # Shared node on axis but symmetric
+    #                 return 1
+    #     elif self._same_position(P, Y, G, tolerance) and (p == 0 and y == 0):
+    #         print("b")
+    #         if abs(q) == abs(x) and (self._is_positive(q) != self._is_positive(x)):
+    #             if not self._are_collinear(Q, P, X, G):  
+    #                 # Shared node on axis but symmetric
+    #                 return 1
+    #     elif self._same_position(Q, Y, G, tolerance) and (q == 0 and y == 0):
+    #         print("c")
+    #         if abs(p) == abs(x) and (self._is_positive(x) != self._is_positive(p)):
+    #             if not self._are_collinear(P, Q, X, G): 
+    #                 # Shared node on axis but symmetric
+    #                 return 1
+    #     elif self._same_position(Q, X, G, tolerance) and (q == 0 and x == 0):
+    #         print("d")
+    #         if abs(p) == abs(y) and (self._is_positive(p) != self._is_positive(y)):
+    #             if not self._are_collinear(P, Q, Y, G):
+    #                 # Shared node on axis but symmetric
+    #                 return 1
+    #     elif self._is_positive(p) != self._is_positive(q):
+    #         # Edge crosses axis
+    #         return 0
+    #     elif self._is_positive(x) != self._is_positive(y):
+    #         # Other edge crosses axis
+    #         return 0
+    #     elif (abs(p) == abs(x) and abs(q) == abs(y)) and (self._is_positive(p) != self._is_positive(x)) and (self._is_positive(q) != self._is_positive(y)):
+    #         print("e")
+    #         # Distances are equal and signs are different
+    #         return 1
+    #     elif (abs(p) == abs(y) and abs(x) == abs(q)) and (self._is_positive(p) != self._is_positive(y)) and (self._is_positive(x) != self._is_positive(q)):
+    #         print("f")
+    #         # Distances are equal and signs are different
+    #         return 1
+    #     else:
+    #         return 0
+
     def _mirror(self, axis, e1, e2, G, tolerance=0):
         e1_p1_x, e1_p1_y = G.nodes[e1[0]]["x"], G.nodes[e1[0]]["y"]
         e1_p2_x, e1_p2_y = G.nodes[e1[1]]["x"], G.nodes[e1[1]]["y"]
@@ -644,6 +715,7 @@ class MetricsSuite():
             x = self._rel_point_line_dist(axis[0], axis[1], e2_p1_x, e2_p1_y)
             y = self._rel_point_line_dist(axis[0], axis[1], e2_p2_x, e2_p2_y)
 
+        #print(str(p)+" "+str(q)+" "+str(x)+" "+str(y))
         if e1 == e2:
             # Same edge
             return 0
@@ -653,23 +725,27 @@ class MetricsSuite():
         elif y == 0 and x == 0:
             # Edge on other axis
             return 0
-        elif self._same_position(P, X, G, tolerance) and (p == 0 and x == 0):
-            if abs(q) == abs(y) and (self._is_positive(q) != self._is_positive(y)):
+        elif self._same_position(P, X, G, tolerance) and (self._same_rel_position(p, 0, tolerance) and self._same_rel_position(x, 0, tolerance)):
+            print("a")
+            if self._same_rel_position(q, y, tolerance) and (self._is_positive(q) != self._is_positive(y)):
                 if not self._are_collinear(Q, P, Y, G):
                     # Shared node on axis but symmetric
                     return 1
-        elif self._same_position(P, Y, G, tolerance) and (p == 0 and y == 0):
-            if abs(q) == abs(x) and (self._is_positive(q) != self._is_positive(x)):
+        elif self._same_position(P, Y, G, tolerance) and (self._same_rel_position(p, 0, tolerance) and self._same_rel_position(y, 0, tolerance)):
+            print("b")
+            if self._same_rel_position(q, x, tolerance) and (self._is_positive(q) != self._is_positive(x)):
                 if not self._are_collinear(Q, P, X, G):  
                     # Shared node on axis but symmetric
                     return 1
-        elif self._same_position(Q, Y, G, tolerance) and (q == 0 and y == 0):
-            if abs(p) == abs(x) and (self._is_positive(x) != self._is_positive(p)):
+        elif self._same_position(Q, Y, G, tolerance) and (self._same_rel_position(q, 0, tolerance) and self._same_rel_position(y, 0, tolerance)):
+            print("c")
+            if self._same_rel_position(p, x, tolerance) and (self._is_positive(x) != self._is_positive(p)):
                 if not self._are_collinear(P, Q, X, G): 
                     # Shared node on axis but symmetric
                     return 1
-        elif self._same_position(Q, X, G, tolerance) and (q == 0 and x == 0):
-            if abs(p) == abs(y) and (self._is_positive(p) != self._is_positive(y)):
+        elif self._same_position(Q, X, G, tolerance) and (self._same_rel_position(q, 0, tolerance) and self._same_rel_position(x, 0, tolerance)):
+            print("d")
+            if self._same_rel_position(p, y, tolerance) and (self._is_positive(p) != self._is_positive(y)):
                 if not self._are_collinear(P, Q, Y, G):
                     # Shared node on axis but symmetric
                     return 1
@@ -679,15 +755,24 @@ class MetricsSuite():
         elif self._is_positive(x) != self._is_positive(y):
             # Other edge crosses axis
             return 0
-        elif (abs(p) == abs(x) and abs(q) == abs(y)) and (self._is_positive(p) != self._is_positive(x)) and (self._is_positive(q) != self._is_positive(y)):
+        elif (self._same_rel_position(p, x, tolerance) and self._same_rel_position(q, y, tolerance) ) and (self._is_positive(p) != self._is_positive(x)) and (self._is_positive(q) != self._is_positive(y)):
+            print("e")
             # Distances are equal and signs are different
             return 1
-        elif (abs(p) == abs(y) and abs(x) == abs(q)) and (self._is_positive(p) != self._is_positive(y)) and (self._is_positive(x) != self._is_positive(q)):
+        elif (self._same_rel_position(p, y, tolerance)  and self._same_rel_position(x, q, tolerance) ) and (self._is_positive(p) != self._is_positive(y)) and (self._is_positive(x) != self._is_positive(q)):
+            print("f")
             # Distances are equal and signs are different
             return 1
         else:
             return 0
+        
 
+    def _same_rel_position(self, a, b, tolerance=0):
+        #print(f"##{a}##{b}")
+        if tolerance == 0:
+            return abs(a) == abs(b)
+        else:
+            return abs(abs(a)-abs(b)) <= tolerance
 
     def _sym_value(self, e1, e2, G):
             # the end nodes of edge1 are P and Q
@@ -749,7 +834,7 @@ class MetricsSuite():
         total_area = 0
         total_sym = 0
 
-        print(f"len:{len(axes)}")
+        #print(f"Num bisectors:{len(axes)}")
         for a in axes:
             num_mirror = 0
             sym_val = 0
@@ -766,9 +851,12 @@ class MetricsSuite():
                         sym_val += self._sym_value(e1, e2, G)
                         subgraph.append(e1)
                         subgraph.append(e2)
+                        print(e1)
+                        print(e2)
 
                     covered.append((e2,e1))
 
+            #print(num_mirror)
             if num_mirror >= threshold:      
                 points = self._graph_to_points(G, subgraph)
 
@@ -1012,7 +1100,7 @@ class MetricsSuite():
 
 if __name__ == "__main__":
     #ms = MetricsSuite("..\\..\\graphs\\moon\\test_6_5_NR05.graphml", metrics_list=["edge_crossing"])
-    ms = MetricsSuite("..\\..\\graphs\\moon\\no2.graphml", metrics_list=["edge_crossing"])
+    ms = MetricsSuite("..\\..\\graphs\\moon\\sym5.graphml", metrics_list=["edge_crossing"])
     #print(ms.get_bounding_box())
     #ms.node_area()
     #print(ms.graph.nodes)
@@ -1027,9 +1115,9 @@ if __name__ == "__main__":
     #print(ms.symmetry())
     #print(ms._circles_intersect(2, 1, 4, 1, 2, 1))
     #print(ms.angular_resolution())
-    #print(ms.symmetry(show_sym=True))
+    print(ms.symmetry(show_sym=True, tolerance=1, threshold=1))
     #print(ms.angular_resolution(all_nodes=True))
-    print(ms.node_orthogonality())
+    #print(ms.node_orthogonality())
     #print(ms.edge_crossing())
     #print(ms.metrics["edge_crossing"]["num_crossings"])
     #ms.draw_graph()
