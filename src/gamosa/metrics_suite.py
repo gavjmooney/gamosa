@@ -138,7 +138,7 @@ class MetricsSuite():
 
 
     def calculate_metrics(self):
-        """Calculates the values of all metric defined in metrics_list."""
+        """Calculates the values of all metrics defined in metrics_list."""
         for metric in self.metrics_list:
             self.calculate_metric(metric)
 
@@ -565,33 +565,13 @@ class MetricsSuite():
         return G.nodes[node]["type"] == "minor"
 
 
-    def _point_line_dist(self, gradient, y_intercept, x, y): #nathan ver
-        x = gradient * float(x)
-        denom = math.sqrt(gradient**2 + 1)
-        return (abs(x + float(y) + float(y_intercept))) / denom
-
-
-    def _point_line_dist2(self, gradient, y_intercept, x ,y): #my ver
-        a = gradient
-        b = 1
-        c = y_intercept
-        return abs((a * x + b * y + c)) / (math.sqrt(a * a + b * b))
-
-
-    def _rel_point_line_dist(self, gradient, y_intercept, x ,y): #nathan ver
+    def _rel_point_line_dist(self, gradient, y_intercept, x ,y):
         gradient *= -1
         y_intercept *= -1
 
         x = gradient * float(x)
         denom = math.sqrt(gradient**2 + 1)
         return (x + float(y) + float(y_intercept)) / denom
-
-
-    def _rel_point_line_dist2(self, gradient, y_intercept, x ,y): #my ver
-        a = gradient
-        b = 1
-        c = y_intercept
-        return (a * x + b * y + c) / (math.sqrt(a * a + b * b))
 
 
     def _same_position(self, n1, n2, G, tolerance=0):
@@ -613,82 +593,6 @@ class MetricsSuite():
         return ((G.nodes[a]['x']*G.nodes[b]['y']) + (G.nodes[b]['x']*G.nodes[c]['y']) + (G.nodes[c]['x']*G.nodes[a]['y'])
          - (G.nodes[a]['x']*G.nodes[c]['y']) - (G.nodes[b]['x']*G.nodes[a]['y']) - (G.nodes[c]['x']*G.nodes[b]['y'])) == 0
 
-
-    # def _mirror(self, axis, e1, e2, G, tolerance=0):
-    #     e1_p1_x, e1_p1_y = G.nodes[e1[0]]["x"], G.nodes[e1[0]]["y"]
-    #     e1_p2_x, e1_p2_y = G.nodes[e1[1]]["x"], G.nodes[e1[1]]["y"]
-
-    #     e2_p1_x, e2_p1_y = G.nodes[e2[0]]["x"], G.nodes[e2[0]]["y"]
-    #     e2_p2_x, e2_p2_y = G.nodes[e2[1]]["x"], G.nodes[e2[1]]["y"]
-
-    #     P, Q, X, Y = e1[0], e1[1], e2[0], e2[1]
-
-    #     if axis[0] == "x":
-    #         p = axis[1] - e1_p1_y
-    #         q = axis[1] - e1_p2_y
-    #         x = axis[1] - e2_p1_y
-    #         y = axis[1] - e2_p2_y
-    #     elif axis[0] == "y":
-    #         p = axis[1] - e1_p1_x
-    #         q = axis[1] - e1_p2_x
-    #         x = axis[1] - e2_p1_x
-    #         y = axis[1] - e2_p2_x
-    #     else:
-    #         p = self._rel_point_line_dist(axis[0], axis[1], e1_p1_x, e1_p1_y)
-    #         q = self._rel_point_line_dist(axis[0], axis[1], e1_p2_x, e1_p2_y)
-    #         x = self._rel_point_line_dist(axis[0], axis[1], e2_p1_x, e2_p1_y)
-    #         y = self._rel_point_line_dist(axis[0], axis[1], e2_p2_x, e2_p2_y)
-
-    #     print(str(p)+" "+str(q)+" "+str(x)+" "+str(y))
-    #     if e1 == e2:
-    #         # Same edge
-    #         return 0
-    #     elif p == 0 and q == 0:
-    #         # Edge on axis
-    #         return 0
-    #     elif y == 0 and x == 0:
-    #         # Edge on other axis
-    #         return 0
-    #     elif self._same_position(P, X, G, tolerance) and (p == 0 and x == 0):
-    #         print("a")
-    #         if abs(q) == abs(y) and (self._is_positive(q) != self._is_positive(y)):
-    #             if not self._are_collinear(Q, P, Y, G):
-    #                 # Shared node on axis but symmetric
-    #                 return 1
-    #     elif self._same_position(P, Y, G, tolerance) and (p == 0 and y == 0):
-    #         print("b")
-    #         if abs(q) == abs(x) and (self._is_positive(q) != self._is_positive(x)):
-    #             if not self._are_collinear(Q, P, X, G):  
-    #                 # Shared node on axis but symmetric
-    #                 return 1
-    #     elif self._same_position(Q, Y, G, tolerance) and (q == 0 and y == 0):
-    #         print("c")
-    #         if abs(p) == abs(x) and (self._is_positive(x) != self._is_positive(p)):
-    #             if not self._are_collinear(P, Q, X, G): 
-    #                 # Shared node on axis but symmetric
-    #                 return 1
-    #     elif self._same_position(Q, X, G, tolerance) and (q == 0 and x == 0):
-    #         print("d")
-    #         if abs(p) == abs(y) and (self._is_positive(p) != self._is_positive(y)):
-    #             if not self._are_collinear(P, Q, Y, G):
-    #                 # Shared node on axis but symmetric
-    #                 return 1
-    #     elif self._is_positive(p) != self._is_positive(q):
-    #         # Edge crosses axis
-    #         return 0
-    #     elif self._is_positive(x) != self._is_positive(y):
-    #         # Other edge crosses axis
-    #         return 0
-    #     elif (abs(p) == abs(x) and abs(q) == abs(y)) and (self._is_positive(p) != self._is_positive(x)) and (self._is_positive(q) != self._is_positive(y)):
-    #         print("e")
-    #         # Distances are equal and signs are different
-    #         return 1
-    #     elif (abs(p) == abs(y) and abs(x) == abs(q)) and (self._is_positive(p) != self._is_positive(y)) and (self._is_positive(x) != self._is_positive(q)):
-    #         print("f")
-    #         # Distances are equal and signs are different
-    #         return 1
-    #     else:
-    #         return 0
 
     def _mirror(self, axis, e1, e2, G, tolerance=0):
         e1_p1_x, e1_p1_y = G.nodes[e1[0]]["x"], G.nodes[e1[0]]["y"]
@@ -727,25 +631,21 @@ class MetricsSuite():
         elif self._same_position(P, X, G, tolerance) and (self._same_rel_position(p, 0, tolerance) and self._same_rel_position(x, 0, tolerance)):
             if self._same_rel_position(q, y, tolerance) and (self._is_positive(q) != self._is_positive(y)):
                 if not self._are_collinear(Q, P, Y, G):
-                    #print("a")
                     # Shared node on axis but symmetric
                     return 1
         elif self._same_position(P, Y, G, tolerance) and (self._same_rel_position(p, 0, tolerance) and self._same_rel_position(y, 0, tolerance)):
             if self._same_rel_position(q, x, tolerance) and (self._is_positive(q) != self._is_positive(x)):
                 if not self._are_collinear(Q, P, X, G): 
-                    #print("b") 
                     # Shared node on axis but symmetric
                     return 1
         elif self._same_position(Q, Y, G, tolerance) and (self._same_rel_position(q, 0, tolerance) and self._same_rel_position(y, 0, tolerance)):
             if self._same_rel_position(p, x, tolerance) and (self._is_positive(x) != self._is_positive(p)):
                 if not self._are_collinear(P, Q, X, G):
-                    #print("c")
                     # Shared node on axis but symmetric
                     return 1
         elif self._same_position(Q, X, G, tolerance) and (self._same_rel_position(q, 0, tolerance) and self._same_rel_position(x, 0, tolerance)):
             if self._same_rel_position(p, y, tolerance) and (self._is_positive(p) != self._is_positive(y)):
                 if not self._are_collinear(P, Q, Y, G):
-                    #print("d")
                     # Shared node on axis but symmetric
                     return 1
         elif self._is_positive(p) != self._is_positive(q):
@@ -785,12 +685,13 @@ class MetricsSuite():
         else:
             return 0
 
+
     def _same_rel_position(self, a, b, tolerance=0):
-        #print(f"##{a}##{b}")
         if tolerance == 0:
             return abs(a) == abs(b)
         else:
             return abs(abs(a)-abs(b)) <= tolerance
+
 
     def _same_distance(self, a, b, tolerance=0.5):
         return abs(abs(a)-abs(b)) <= tolerance
@@ -856,10 +757,8 @@ class MetricsSuite():
         total_area = 0
         total_sym = 0
 
-        #print(f"Num bisectors:{len(axes)}")
         for a in axes:
-            # print()
-            # print(a)
+
             num_mirror = 0
             sym_val = 0
             subgraph = []
@@ -880,13 +779,9 @@ class MetricsSuite():
 
                     covered.append((e2,e1))
 
-            #print(num_mirror)
             
             if num_mirror >= threshold:
 
-                
-                # print(f"num_mirror:{num_mirror}")
-                # print(subgraph)
                 points = self._graph_to_points(G, subgraph)
 
                 if len(points) <= 2:
@@ -906,16 +801,13 @@ class MetricsSuite():
                             ag.nodes[node]["y"] = G.nodes[node]["y"]
                     self.draw_graph(ag)
 
-                total_sym += (sym_val * sub_area) / (len(subgraph)/2) #len/2? ask about it?
+                total_sym += (sym_val * sub_area) / (len(subgraph)/2)
 
         whole_area_points = self._graph_to_points(G)
 
         whole_hull = ConvexHull(whole_area_points)
         whole_area = whole_hull.volume
 
-        # print(f"Sym area:{total_sym}")
-        # print(f"Total:{total_area}")
-        # print(f"Whole:{whole_area}")
         return total_sym / max(whole_area, total_area)
 
 
@@ -974,70 +866,7 @@ class MetricsSuite():
                 if d > max_dist:
                     max_dist = d
 
-        #r = 1 / math.sqrt(len(self.graph.nodes))
-        #nr = min_dist / max_dist
-        #return nr if nr > 0 else 0
-        # print(min_dist)
-        # print(max_dist)
         return min_dist / max_dist
-
-
-    def node_resolution2(self):
-        ideal_dist = 0
-        for n1 in self.graph.nodes:
-            for n2 in self.graph.nodes:
-                if n1 == n2:
-                    continue
-                a = self.graph.nodes[n1]['x'], self.graph.nodes[n1]['y']
-                b = self.graph.nodes[n2]['x'], self.graph.nodes[n2]['y']
-                
-                ideal_dist += self._euclidean_distance(a, b)
-
-        
-        ideal_dist = ideal_dist / (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1))
-        
-        dist_sum = 0
-
-        for n1 in self.graph.nodes:
-            for n2 in self.graph.nodes:
-                if n1 == n2:
-                    continue
-                a = self.graph.nodes[n1]['x'], self.graph.nodes[n1]['y']
-                b = self.graph.nodes[n2]['x'], self.graph.nodes[n2]['y']
-                dist_sum += (abs(ideal_dist - self._euclidean_distance(a, b)) / ideal_dist)
-
-
-        return 1 - (dist_sum / (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)))
-
-
-    def edge_length_old(self):
-        """Minimize the average deviation from ideal length, as in Ahmed et al."""
-
-        ideal_edge_length = 0
-        for edge in self.graph.edges:
-            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
-            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
-            
-            ideal_edge_length += self._euclidean_distance(a, b)
-
-        
-        # For unweighted graphs, set the ideal edge length to the average edge length
-        ideal_edge_length = ideal_edge_length / self.graph.number_of_edges()
-
-        
-        edge_length_sum = 0
-
-        for edge in self.graph.edges:
-            a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
-            b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
-            edge_length_sum += ((self._euclidean_distance(a, b) - ideal_edge_length) / ideal_edge_length)**2
-            #edge_length_sum += (abs(self._euclidean_distance(a, b) - ideal_edge_length) / ideal_edge_length)
-
-
-        return -math.sqrt((edge_length_sum / self.graph.number_of_edges()))
-        #return 1 - (edge_length_sum / self.graph.number_of_edges())
-        #el = math.sqrt((edge_length_sum / self.graph.number_of_edges()))
-        #return 1 - el if el < 1 else 0
         
 
     def edge_length(self):
@@ -1143,7 +972,6 @@ if __name__ == "__main__":
     #     print(ms._midpoint(edge[0], edge[1]))
     #print(ms.gabriel_ratio())
     #print(ms.symmetry())
-    #print(ms._circles_intersect(2, 1, 4, 1, 2, 1))
     #print(ms.angular_resolution())
     print(ms.symmetry(show_sym=True, tolerance=0, threshold=2))
     #print(ms.angular_resolution(all_nodes=True))

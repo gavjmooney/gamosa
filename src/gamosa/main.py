@@ -18,7 +18,7 @@ def main():
 
     weights = { "edge_crossing":1}   
     #weights = { "angular_resolution":1, "edge_length":1}   
-    #weights = { "gabriel_ratio":1, "node_resolution":1}   
+    weights = { "gabriel_ratio":1, "node_resolution":1}   
     #weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
     # weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
     #weights = { "node_resolution":1, "edge_length":1 }
@@ -34,10 +34,12 @@ def main():
     nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
 
     ms2 = MetricsSuite(G2, metrics_list=weights.keys())
-    ms2.calculate_metrics()
-    ms2.pretty_print_metrics()
+    #ms2.calculate_metrics()
+    #ms2.pretty_print_metrics()
 
     plt.show()
+
+    sa.plot_temperatures()
 
 if __name__ == "__main__":
     main()
