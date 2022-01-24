@@ -158,13 +158,25 @@ class TestMetricsSuiteSymmetry(unittest.TestCase):
 
         self.assertEqual(1, ms.metrics["symmetry"]["value"])
 
+    def test_sym0625(self):
+        filename = PATH + "test_10_10_SYM0625.graphml"
+        ms = MetricsSuite(filename, metrics_list=["symmetry"])
+        ms.calculate_metric("symmetry")
+
+        self.assertAlmostEqual(0.625, ms.metrics["symmetry"]["value"], 3)
+
     def test_sym_tolerance(self):
         filename = PATH + "test_4_4_SYM025-075.graphml"
         ms = MetricsSuite(filename, metrics_list=["symmetry"])
 
+        # Total area of graph is 17250
+        # Area of Equilateral triangle is 4330
+
         self.assertEqual(0, ms.symmetry())
-        self.assertAlmostEqual(0.25, ms.symmetry(threshold=1), 2)
-        self.assertAlmostEqual(0.75, ms.symmetry(threshold=1, tolerance=1), 2)
+        # Threshold set to 1 as a triangle when split by bisector will only have one symmetry at each axis
+        self.assertAlmostEqual(0.251, ms.symmetry(threshold=1), 3) # 4330 / 17250 ~= 0.251
+        # Tolerance set to 1 as an equilateral triangle cannot be represented by three vertexes without at least one irrational vertex
+        self.assertAlmostEqual(0.753, ms.symmetry(threshold=1, tolerance=1), 3) # 4330 * 3 / 17250 ~= 0.753
 
 
 class TestMetricsSuiteEdgeOrthogonality(unittest.TestCase):
