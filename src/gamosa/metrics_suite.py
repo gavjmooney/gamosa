@@ -12,35 +12,41 @@ class MetricsSuite():
     Takes as an argument an optional list of metrics to calculate (only edge crossings by default) and an optional method for combining them (weighted sum by default).
     Also takes an optional dictionary of metric:weight values defining the relative weight of each metric. Without this dictionary all weights are defaulted to 1"""
 
-    def __init__(self, graph=None, metrics_list=None, weights=None, mcdat="weighted_sum"):
+    def __init__(self, graph=None, metric_weights=None, mcdat="weighted_sum", sym_threshold=2, sym_tolerance=0):
 
         self.metrics = {"edge_crossing": {"func":self.edge_crossing, "value":None, "num_crossings":None, "weight":1},
-                        "edge_orthogonality": {"func":self.edge_orthogonality, "value":None, "weight":1},
-                        "node_orthogonality": {"func":self.node_orthogonality, "value":None, "weight":1},
-                        "angular_resolution": {"func":self.angular_resolution, "value":None, "weight":1},
-                        "symmetry": {"func":self.symmetry, "value":None, "weight":1},
-                        "node_resolution": {"func":self.node_resolution, "value":None, "weight":1},
-                        "edge_length": {"func":self.edge_length, "value":None, "weight":1},
-                        "gabriel_ratio": {"func":self.gabriel_ratio, "value":None, "weight":1},
-                        "crossing_angle": {"func":self.crossing_angle, "value":None, "weight":1},
-        
+                        "edge_orthogonality": {"func":self.edge_orthogonality, "value":None, "weight":0},
+                        "node_orthogonality": {"func":self.node_orthogonality, "value":None, "weight":0},
+                        "angular_resolution": {"func":self.angular_resolution, "value":None, "weight":0},
+                        "symmetry": {"func":self.symmetry, "value":None, "weight":0},
+                        "node_resolution": {"func":self.node_resolution, "value":None, "weight":0},
+                        "edge_length": {"func":self.edge_length, "value":None, "weight":0},
+                        "gabriel_ratio": {"func":self.gabriel_ratio, "value":None, "weight":0},
+                        "crossing_angle": {"func":self.crossing_angle, "value":None, "weight":0},
         } 
+
         self.mcdat_dict = {"weighted_sum":self._weighted_sum,
                            "weighted_prod":self._weighted_prod,
-        
         }
 
-        # Check all metrics given are valid
-        if metrics_list is None:
-            self.metrics_list = ["edge_crossing"]
-        else:
-            self.metrics_list = metrics_list
-        
-            for metric in metrics_list:
+        # Check all metrics given are valid and assign weights
+        if metric_weights:
+            for metric in metric_weights:
                 assert metric in self.metrics, f"Unknown metric: {metric}. Available metrics: {list(self.metrics.keys())}"
+
+                if type(metric_weights[metric]) != int and type(metric_weights[metric]) != float:
+                    raise TypeError(f"Metric weights must a number, not {type(metric_weights[metric])}")
+
+                if metric_weights[metric] < 0:
+                    raise ValueError(f"Metric weights must be positive.")
+
+                self.metrics[metric]["weight"] = metric_weights[metric]
+
+        self.initial_weights = metric_weights
 
         # Check metric combination strategy is valid
         assert mcdat in self.mcdat_dict, f"Unknown mcdat: {mcdat}. Available mcats: {list(self.mcdat_dict.keys())}"
+        self.mcdat = mcdat
         
         if graph is None:
             self.graph = self.load_graph_test()
@@ -50,22 +56,35 @@ class MetricsSuite():
             # TODO: Should check that it is nx graph explicitly and throw error otherwise
             self.graph = graph
 
-        if weights:
-            self.add_weights(weights)
+        # Check symmetry parameters
+        if type(sym_tolerance) != int and type(sym_tolerance) != float:
+            raise TypeError(f"sym_tolerance must be a number, not {type(sym_tolerance)}")
+
+        if sym_tolerance < 0:
+            raise ValueError(f"sym_tolerance must be positive.")
+
+        self.sym_tolerance = sym_tolerance
 
 
-        self.mcdat = mcdat
+        if type(sym_threshold) != int and type(sym_threshold) != float:
+            raise TypeError(f"sym_threshold must be a number, not {type(sym_threshold)}")
+
+        if sym_threshold < 0:
+            raise ValueError(f"sym_threshold must be positive.")
+        
+        self.sym_threshold = sym_threshold
+
 
 
     def _weighted_prod(self):
         """Returns the weighted product of all metrics."""
-        return math.prod(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.metrics_list)
+        return math.prod(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.initial_weights)
 
 
     def _weighted_sum(self):
         """Returns the weighted sum of all metrics."""
-        total_weight = sum(self.metrics[metric]["weight"] for metric in self.metrics_list)
-        return sum(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.metrics_list) / total_weight #len(self.metrics_list)
+        total_weight = sum(self.metrics[metric]["weight"] for metric in self.metrics)
+        return sum(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.initial_weights) / total_weight #len(self.metrics) > 0?
     
 
     def load_graph_test(self, nxg=nx.sedgewick_maze_graph):
@@ -138,32 +157,22 @@ class MetricsSuite():
 
 
     def calculate_metrics(self):
-        """Calculates the values of all metrics defined in metrics_list."""
-        for metric in self.metrics_list:
-            self.calculate_metric(metric)
-
-
-    def add_weights(self, weights):
-        """Takes a dictionary of metric:weights and assigns that metric to its weight."""
-        for metric, weight in weights.items():
-            self._assign_weight(metric, weight)
-
-
-    def _assign_weight(self, metric, weight):
-        self.metrics[metric]["weight"] = weight
+        """Calculates the values of all metrics."""
+        for metric in self.metrics:
+            if self.metrics[metric]["weight"] != 0:
+                self.calculate_metric(metric)
 
 
     def combine_metrics(self):
         """Combine several metrics based on the given multiple criteria descision analysis technique."""
-        for metric in self.metrics_list:
-            if self.metrics[metric]["value"] == None:
-                # Possibly remove this and throw error instead, don't want to be calcualting metrics implicitly
-                self.calculate_metric(metric)
+        # Important to loop over initial weights to avoid checking the weight of all metrics when they are not needed
+        for metric in self.initial_weights:
+            self.calculate_metric(metric)
 
         return self.mcdat_dict[self.mcdat]()
 
 
-    def draw_graph(self, graph=None, flip=True):
+    def draw_graph(self, graph=None, flip=False):
         """Draws the graph using standard networkx methods with matplotlib. Due to the nature of the coordinate systems used,
         Graphs will be flipped on the X axis. To see the graph the way it would be drawn in YeD, set flip to True"""
         if graph is None:
@@ -179,9 +188,21 @@ class MetricsSuite():
 
 
     def pretty_print_metrics(self):
+        self.calculate_metrics()
+        print("-"*40)
+        print("{:<20s}Value\tWeight".format("Metric"))
+        print("-"*40)
         for k,v in self.metrics.items():
-            print(f"{k}: {v['value']}")
-
+            
+            if v['value']:
+                val_str = f"{v['value']:.3f}"
+                print(f"{k:<20s}{val_str:<5s}\t{v['weight']}")
+            else:
+                print(f"{k:<20s}{str(v['value']):<5s}\t{v['weight']}")
+        print("-"*40)
+        print(f"Evaluation using {self.mcdat}: {self.combine_metrics():.5f}")
+        print("-"*40)
+        
 
     def pretty_print_nodes(self, graph=None):
         if graph is None:
@@ -747,7 +768,10 @@ class MetricsSuite():
         return points
 
 
-    def symmetry(self, G=None, threshold=2, tolerance=0, show_sym=False):
+    def symmetry(self, G=None, show_sym=False):
+        threshold = self.sym_threshold
+        tolerance = self.sym_tolerance
+
         if G is None:
             G = self.crosses_promotion()
 
@@ -958,8 +982,9 @@ class MetricsSuite():
 
 
 if __name__ == "__main__":
-    #ms = MetricsSuite("..\\..\\graphs\\moon\\test_6_5_NR05.graphml", metrics_list=["edge_crossing"])
-    ms = MetricsSuite("..\\..\\graphs\\moon\\test_10_10_SYM0625.graphml", metrics_list=["edge_crossing"])
+    
+    ms = MetricsSuite("..\\..\\graphs\\moon\\test_10_10_SYM0625.graphml", metric_weights={"edge_crossing":1, "gabriel_ratio":2, "edge_length":1}, mcdat="weighted_prod")
+    ms.pretty_print_metrics()
     #print(ms.get_bounding_box())
     #ms.node_area()
     #print(ms.graph.nodes)
@@ -973,7 +998,7 @@ if __name__ == "__main__":
     #print(ms.gabriel_ratio())
     #print(ms.symmetry())
     #print(ms.angular_resolution())
-    print(ms.symmetry(show_sym=True, tolerance=0, threshold=2))
+    #print(ms.symmetry(show_sym=True, tolerance=0, threshold=2))
     #print(ms.angular_resolution(all_nodes=True))
     #print(ms.node_orthogonality())
     #print(ms.edge_crossing())

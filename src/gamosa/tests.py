@@ -47,7 +47,7 @@ class TestMetricsSuiteEdgeCrossing(unittest.TestCase):
 
     def test_ec1(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_crossing"])
+        ms = MetricsSuite(filename, metric_weights={"edge_crossing":1})
         ms.calculate_metric("edge_crossing")
 
         self.assertEqual(1, ms.metrics["edge_crossing"]["value"])
@@ -55,7 +55,7 @@ class TestMetricsSuiteEdgeCrossing(unittest.TestCase):
 
     def test_ec0(self):
         filename = PATH + "test_4_4_EC0_CA1.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_crossing"])
+        ms = MetricsSuite(filename, metric_weights={"edge_crossing":1})
         ms.calculate_metric("edge_crossing")
 
         self.assertEqual(0, ms.metrics["edge_crossing"]["value"])
@@ -63,7 +63,7 @@ class TestMetricsSuiteEdgeCrossing(unittest.TestCase):
 
     def test_ec06(self):
         filename = PATH + "test_8_7_EC06.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_crossing"])
+        ms = MetricsSuite(filename, metric_weights={"edge_crossing":1})
         ms.calculate_metric("edge_crossing")
 
         self.assertEqual(0.6, ms.metrics["edge_crossing"]["value"])
@@ -74,21 +74,21 @@ class TestMetricsSuiteAngularResolution(unittest.TestCase):
 
     def test_ar1(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["angular_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"angular_resolution":1})
         ms.calculate_metric("angular_resolution")
 
         self.assertEqual(1, ms.metrics["angular_resolution"]["value"])
 
     def test_ar075(self):
         filename = PATH + "test_6_5_AR075.graphml"
-        ms = MetricsSuite(filename, metrics_list=["angular_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"angular_resolution":1})
         ms.calculate_metric("angular_resolution")
 
         self.assertEqual(0.75, ms.metrics["angular_resolution"]["value"])
 
     def test_ar081_025(self):
         filename = PATH + "test_3_3_AR081_025.graphml"
-        ms = MetricsSuite(filename, metrics_list=["angular_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"angular_resolution":1})
         ms.calculate_metric("angular_resolution")
 
         self.assertAlmostEqual(0.25, ms.metrics["angular_resolution"]["value"], 2)
@@ -99,28 +99,28 @@ class TestMetricsSuiteNodeResolution(unittest.TestCase):
 
     def test_nr_055(self):
         filename = PATH + "test_3_2_NR055.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"node_resolution":1})
         ms.calculate_metric("node_resolution")
 
         self.assertAlmostEqual(0.55, ms.metrics["node_resolution"]["value"], 2)
 
     def test_nr_1(self):
         filename = PATH + "test_3_3_NR1.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"node_resolution":1})
         ms.calculate_metric("node_resolution")
 
         self.assertAlmostEqual(1, ms.metrics["node_resolution"]["value"], 2)
 
     def test_nr_05(self):
         filename = PATH + "test_3_2_NR05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"node_resolution":1})
         ms.calculate_metric("node_resolution")
 
         self.assertAlmostEqual(0.5, ms.metrics["node_resolution"]["value"], 2)
 
     def test_nr_0217(self):
         filename = PATH + "test_3_2_NR0217.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_resolution"])
+        ms = MetricsSuite(filename, metric_weights={"node_resolution":1})
         ms.calculate_metric("node_resolution")
 
         self.assertAlmostEqual(0.217, ms.metrics["node_resolution"]["value"], 2)       
@@ -129,21 +129,21 @@ class TestMetricsSuiteEdgeLength(unittest.TestCase):
 
     def test_el1(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_length"])
+        ms = MetricsSuite(filename, metric_weights={"edge_length":1})
         ms.calculate_metric("edge_length")
 
         self.assertEqual(1, ms.metrics["edge_length"]["value"])
 
     def test_el1_2(self):
         filename = PATH + "test_4_3_NO1_EL1.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_length"])
+        ms = MetricsSuite(filename, metric_weights={"edge_length":1})
         ms.calculate_metric("edge_length")
 
         self.assertEqual(1, ms.metrics["edge_length"]["value"])
     
     def test_el067(self):
         filename = PATH + "test_4_3_NO67_EL067_GR083.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_length"])
+        ms = MetricsSuite(filename, metric_weights={"edge_length":1})
         ms.calculate_metric("edge_length")
 
         self.assertAlmostEqual(0.67, ms.metrics["edge_length"]["value"], 2)
@@ -153,44 +153,47 @@ class TestMetricsSuiteSymmetry(unittest.TestCase):
 
     def test_sym1(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["symmetry"])
+        ms = MetricsSuite(filename, metric_weights={"symmetry":1})
         ms.calculate_metric("symmetry")
 
         self.assertEqual(1, ms.metrics["symmetry"]["value"])
 
     def test_sym0625(self):
         filename = PATH + "test_10_10_SYM0625.graphml"
-        ms = MetricsSuite(filename, metrics_list=["symmetry"])
+        ms = MetricsSuite(filename, metric_weights={"symmetry":1})
         ms.calculate_metric("symmetry")
 
         self.assertAlmostEqual(0.625, ms.metrics["symmetry"]["value"], 3)
 
     def test_sym_tolerance(self):
         filename = PATH + "test_4_4_SYM025-075.graphml"
-        ms = MetricsSuite(filename, metrics_list=["symmetry"])
+        ms = MetricsSuite(filename, metric_weights={"symmetry":1})
 
         # Total area of graph is 17250
         # Area of Equilateral triangle is 4330
 
         self.assertEqual(0, ms.symmetry())
         # Threshold set to 1 as a triangle when split by bisector will only have one symmetry at each axis
-        self.assertAlmostEqual(0.251, ms.symmetry(threshold=1), 3) # 4330 / 17250 ~= 0.251
+        ms.sym_threshold = 1
+        self.assertAlmostEqual(0.251, ms.symmetry(), 3) # 4330 / 17250 ~= 0.251
+        
         # Tolerance set to 1 as an equilateral triangle cannot be represented by three vertexes without at least one irrational vertex
-        self.assertAlmostEqual(0.753, ms.symmetry(threshold=1, tolerance=1), 3) # 4330 * 3 / 17250 ~= 0.753
+        ms.sym_tolerance = 1
+        self.assertAlmostEqual(0.753, ms.symmetry(), 3) # 4330 * 3 / 17250 ~= 0.753
 
 
 class TestMetricsSuiteEdgeOrthogonality(unittest.TestCase):
 
     def test_eo1(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"edge_orthogonality":1})
         ms.calculate_metric("edge_orthogonality")
 
         self.assertEqual(1, ms.metrics["edge_orthogonality"]["value"])
 
     def test_eo056(self):
         filename = PATH + "test_6_5_EO044.graphml"
-        ms = MetricsSuite(filename, metrics_list=["edge_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"edge_orthogonality":1})
         ms.calculate_metric("edge_orthogonality")
         
         self.assertAlmostEqual(0.56, ms.metrics["edge_orthogonality"]["value"], 2)
@@ -200,35 +203,35 @@ class TestMetricsSuiteNodeOrthogonality(unittest.TestCase):
 
     def test_no05(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"node_orthogonality":1})
         ms.calculate_metric("node_orthogonality")
 
         self.assertEqual(0.5, ms.metrics["node_orthogonality"]["value"])
 
     def test_no05(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"node_orthogonality":1})
         ms.calculate_metric("node_orthogonality")
 
         self.assertEqual(0.5, ms.metrics["node_orthogonality"]["value"])
 
     def test_no05_2(self):
         filename = PATH + "test_6_5_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"node_orthogonality":1})
         ms.calculate_metric("node_orthogonality")
 
         self.assertEqual(0.5, ms.metrics["node_orthogonality"]["value"])
 
     def test_no1(self):
         filename = PATH + "test_4_3_NO1_EL1.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"node_orthogonality":1})
         ms.calculate_metric("node_orthogonality")
 
         self.assertEqual(1, ms.metrics["node_orthogonality"]["value"])
 
     def test_no067(self):
         filename = PATH + "test_4_3_NO67_EL067_GR083.graphml"
-        ms = MetricsSuite(filename, metrics_list=["node_orthogonality"])
+        ms = MetricsSuite(filename, metric_weights={"node_orthogonality":1})
         ms.calculate_metric("node_orthogonality")
 
         self.assertAlmostEqual(0.67, ms.metrics["node_orthogonality"]["value"], 2)
@@ -238,14 +241,14 @@ class TestMetricsSuiteGabrielRatio(unittest.TestCase):
 
     def test_gr1(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["gabriel_ratio"])
+        ms = MetricsSuite(filename, metric_weights={"gabriel_ratio":1})
         ms.calculate_metric("gabriel_ratio")
 
         self.assertEqual(1, ms.metrics["gabriel_ratio"]["value"])
 
     def test_gr083(self):
         filename = PATH + "test_4_3_NO67_EL067_GR083.graphml"
-        ms = MetricsSuite(filename, metrics_list=["gabriel_ratio"])
+        ms = MetricsSuite(filename, metric_weights={"gabriel_ratio":1})
         ms.calculate_metric("gabriel_ratio")
 
         self.assertAlmostEqual(0.83, ms.metrics["gabriel_ratio"]["value"], 2)
@@ -255,28 +258,28 @@ class TestMetricsSuiteCrossingAngle(unittest.TestCase):
     
     def test_ca1(self):
         filename = PATH + "test_4_4_EC0_CA1.graphml"
-        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms = MetricsSuite(filename, metric_weights={"crossing_angle":1})
         ms.calculate_metric("crossing_angle")
 
         self.assertEqual(1, ms.metrics["crossing_angle"]["value"])
 
     def test_ca2(self):
         filename = PATH + "test_7_7_CA1.graphml"
-        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms = MetricsSuite(filename, metric_weights={"crossing_angle":1})
         ms.calculate_metric("crossing_angle")
 
         self.assertEqual(1, ms.metrics["crossing_angle"]["value"])
 
     def test_ca05(self):
         filename = PATH + "test_4_3_CA05.graphml"
-        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms = MetricsSuite(filename, metric_weights={"crossing_angle":1})
         ms.calculate_metric("crossing_angle")
 
         self.assertEqual(0.5, ms.metrics["crossing_angle"]["value"])
 
     def test_ca057(self):
         filename = PATH + "test_4_3_CA057.graphml"
-        ms = MetricsSuite(filename, metrics_list=["crossing_angle"])
+        ms = MetricsSuite(filename, metric_weights={"crossing_angle":1})
         ms.calculate_metric("crossing_angle")
 
         self.assertAlmostEqual(0.57, ms.metrics["crossing_angle"]["value"], 2)
