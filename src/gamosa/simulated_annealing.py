@@ -13,7 +13,7 @@ class SimulatedAnnealing():
                         cooling_schedule="linear_a",
                         t_min=0,
                         t_max=100,
-                        alpha=0.8,
+                        alpha=0.6,
                         next_step="random",
                         n_nodes_random_step=1,
                         n_iters=1000,
@@ -21,10 +21,14 @@ class SimulatedAnnealing():
         
         self.initial_configs = {"random":self._initial_random,
                                 "load":self._initial_load,
-                                #"x_align":self._inital_x_align,
+                                "x_axis":self._initial_x_axis,
+                                "y_axis":self._initial_y_axis,
+                                "grid":self._initial_grid,
         }
 
         self.next_steps = {"random":self._step_random,
+                            "swap":self._step_swap,
+                            "random_bounded": self._step_random_bounded,
                                 #"load":self._step_random2,
                                 #"x_align":self.something,
         }
@@ -62,6 +66,11 @@ class SimulatedAnnealing():
         self.alpha = alpha
 
         self.n_nodes_random_step = n_nodes_random_step
+        bb = graph_loader.get_bounding_box(self.graph)
+        self.initial_step_bound_radius = graph_loader._euclidean_distance((bb[0][0],bb[0][1]), (bb[1][0],bb[1][1])) / 2
+        self.step_bound_radius = self.initial_step_bound_radius
+
+        graph_loader.draw_graph(self.initial_config)
 
     def _initial_load(self, graph):
         """Use the coordinates of a loaded graph drawing as the initial positions. Existing drawings 
@@ -72,7 +81,60 @@ class SimulatedAnnealing():
             assert 'y' in attributes, f"Error: No Y coordinate for node: {node}"
 
         return graph
+
+    def _initial_x_axis(self, graph, distance=60):
+        """Position nodes along the x axis"""
+
+        position = 0
+        for node in graph.nodes:
+            graph.nodes[node]["x"] = position
+            graph.nodes[node]["y"] = 0
+            position += distance
+
+        return graph
+
+    def _initial_y_axis(self, graph, distance=60):
+        """Position nodes along the x axis"""
+
+        position = 0
+        for node in graph.nodes:
+            graph.nodes[node]["x"] = 0
+            graph.nodes[node]["y"] = position
+            position += distance
         
+        return graph
+
+
+    def _initial_grid(self, graph, w_distance=60, h_distance=60, w=0, h=0):
+        
+        i = 0
+        j = 0
+        n = graph.number_of_nodes()
+
+        if w < 0:
+            raise ValueError(f"w must be non negative but is {w}")
+        if h < 0:
+            raise ValueError(f"h must be non negative but is {h}")
+
+        if w == 0 and h == 0:
+            w = math.ceil(math.sqrt(n))
+            h = math.ceil(math.sqrt(n))
+
+        if w * h < n:
+            raise ValueError(f"grid not large enough with width {w} and height {h}, need at least {n} spaces, currently there are {w*h}")
+
+        positions = []
+        for i in range(h):
+            for j in range(w):
+                positions.append((j*w_distance, i*h_distance))
+
+        #positions = positions[:n]
+
+        for node, pos in zip(graph.nodes, positions):
+            graph.nodes[node]["x"] = pos[0]
+            graph.nodes[node]["y"] = pos[1]
+                
+        return graph
 
     def _initial_random(self, graph):
         """Assign nodes to random positions as the initial layout for the algorithm."""
@@ -96,8 +158,7 @@ class SimulatedAnnealing():
             # random_y = rand.uniform(0,1)
             random_x = rand.uniform(bb[0][0],bb[1][0])
             random_y = rand.uniform(bb[0][1],bb[1][1])
-            graph.nodes[random_node]["x"] = random_x
-            graph.nodes[random_node]["y"] = random_y
+            graph.nodes[random_node]["x"], graph.nodes[random_node]["y"]  = random_x, random_y
 
         return graph
 
@@ -106,16 +167,32 @@ class SimulatedAnnealing():
         a, b = rand.sample(list(graph.nodes), 2)
         
         temp_x, temp_y = graph.nodes[a]['x'], graph.nodes[a]['y']
-
         graph.nodes[a]['x'], graph.nodes[a]['y'] = graph.nodes[b]['x'], graph.nodes[b]['y']
-        graph.nodes[b]['x'], graph.nodes[b]['y'] = graph.nodes[temp_x]['x'], graph.nodes[temp_y]['y']
+        graph.nodes[b]['x'], graph.nodes[b]['y'] = temp_x, temp_y
 
         return graph
 
-    def _step_random_bounded(self, graph, i):
+
+    def _step_random_bounded(self, graph):
         """Move the position of n random nodes to a new random position, bounded by a circle of decreasing size, where n is defined 
         in self.n_nodes_random_step"""
-        pass
+        
+        ms = MetricsSuite(graph)
+        bb = ms.get_bounding_box()
+
+
+        for random_node in rand.sample(list(graph.nodes), self.n_nodes_random_step):
+            r = self.step_bound_radius * math.sqrt(rand.random())
+            theta = rand.random() * 2 * math.pi
+            x = graph.nodes[random_node]["x"] + r * math.cos(theta)
+            y = graph.nodes[random_node]["y"] + r * math.sin(theta)
+            graph.nodes[random_node]["x"], graph.nodes[random_node]["y"]  = x, y
+
+        self.step_bound_radius -= self.initial_step_bound_radius / self.n_iters
+        if self.step_bound_radius < 5:
+            self.step_bound_radius = 5
+
+        return graph
 
 
     def multiplicative_linear(self, i):
@@ -134,7 +211,12 @@ class SimulatedAnnealing():
         return self.t_max * self.alpha**i
 
     def multiplicative_logarithmic(self, i):
-        return self.t_max / (self.alpha * math.log(i + 1))
+        if i == 0:
+            return self.t_max
+
+        new_t = self.t_max / (self.alpha * math.log(i + 1))
+        
+        return new_t if new_t <= self.t_max else self.t_max
 
     def _check_satisfactory(self, ms, satisfactory_level=1):
         """Check the condition of current metrics compared to a defined level."""
@@ -223,4 +305,87 @@ class SimulatedAnnealing():
             plt.title(cs)
             
         plt.suptitle('Cooling Schedules')
+        plt.show()
+
+
+    def plot_temperatures2(self):
+
+
+        plt.figure()
+        plt.xlabel('Iteration')
+        plt.ylabel('Temperature')
+
+        
+        pos_lin_a = []
+        temp_lin_a = []
+        
+        pos_lin_m = []
+        temp_lin_m = []
+
+        pos_quad_a = []
+        temp_quad_a = []
+
+        pos_quad_m = []
+        temp_quad_m = []
+
+        pos_log = []
+        temp_log = []
+
+        pos_exp = []
+        temp_exp = []
+
+
+        t = self.t_max
+        for n in range(self.n_iters):
+            t = self.cooling_schedules["linear_a"](n)
+            pos_lin_a.append(n)
+            temp_lin_a.append(t)
+
+        t = self.t_max
+        for n in range(self.n_iters):
+            t = self.cooling_schedules["linear_m"](n)
+            pos_lin_m.append(n)
+            temp_lin_m.append(t)
+
+
+        t = self.t_max
+        for n in range(self.n_iters):
+            t = self.cooling_schedules["quadratic_a"](n)
+            pos_quad_a.append(n)
+            temp_quad_a.append(t)
+
+
+        t = self.t_max
+        for n in range(self.n_iters):
+            t = self.cooling_schedules["quadratic_m"](n)
+            pos_quad_m.append(n)
+            temp_quad_m.append(t)
+
+
+        t = self.t_max
+        for n in range(self.n_iters):
+            t = self.cooling_schedules["exponential"](n)
+            pos_exp.append(n)
+            temp_exp.append(t)
+
+
+        t = self.t_max
+        for n in range(self.n_iters):
+            t = self.cooling_schedules["logarithmic"](n)
+            pos_log.append(n)
+            temp_log.append(t)
+
+
+        plt.plot(pos_lin_a, temp_lin_a, label = "linear additive")
+        plt.plot(pos_lin_m, temp_lin_m, label = "linear multiplicative")
+        plt.plot(pos_quad_a, temp_quad_a, label = "quadratic additive")
+        plt.plot(pos_quad_m, temp_quad_m, label = "quadratic multiplicative")
+        plt.plot(pos_exp, temp_exp, label = "exponential")
+        plt.plot(pos_log, temp_log, label = "logarithmic")
+
+
+
+        plt.title("Cooling Schedules")
+        plt.legend()
+
         plt.show()

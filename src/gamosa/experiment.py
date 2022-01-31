@@ -4,10 +4,10 @@ from simulated_annealing import SimulatedAnnealing
 from matplotlib import pyplot as plt
 import numpy as np
 from tests import *
+import os
 
 
-
-def main():
+def main2():
 
     filename = "..\\..\\graphs\\moon\\ca.graphml"
 
@@ -45,7 +45,26 @@ def main():
 
     sa.plot_temperatures2()
 
+
+def perform_sa(graph, metrics):
+
+    #ms = MetricsSuite(graph, metrics.keys(), metrics)
+
+    sa = SimulatedAnnealing(graph=graph, )
+
+
+def main():
+    
+
+    directory = os.fsencode(PATH)
+
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)
+        
+        
+        ms = MetricsSuite
     
 
 if __name__ == "__main__":
+    PATH = "..\\..\\graphs\\rome\\"
     main()
