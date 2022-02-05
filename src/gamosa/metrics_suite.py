@@ -31,25 +31,29 @@ class MetricsSuite():
 
         # Check all metrics given are valid and assign weights
         if metric_weights:
+            metrics_to_remove = []
             for metric in metric_weights:
                 assert metric in self.metrics, f"Unknown metric: {metric}. Available metrics: {list(self.metrics.keys())}"
 
                 if type(metric_weights[metric]) != int and type(metric_weights[metric]) != float:
-                    raise TypeError(f"Metric weights must a number, not {type(metric_weights[metric])}")
+                    raise TypeError(f"Metric weights must be a number, not {type(metric_weights[metric])}")
 
                 if metric_weights[metric] < 0:
                     raise ValueError(f"Metric weights must be positive.")
 
                 self.metrics[metric]["weight"] = metric_weights[metric]
 
-        self.initial_weights = metric_weights
-        metrics_to_remove = []
-        for metric, weight in self.initial_weights.items():
-            if weight == 0:
-                metrics_to_remove.append(metric)
+                if metric_weights[metric] == 0:
+                    metrics_to_remove.append(metric)
+            
+            # Remove 0 weighted metrics
+            for metric in metrics_to_remove:
+                metric_weights.pop(metric)
 
-        for metric in metrics_to_remove:
-            self.initial_weights.pop(metric)
+            self.initial_weights = metric_weights
+
+        else:
+            self.initial_weights = {"edge_crossing": 1}
 
         # Check metric combination strategy is valid
         assert mcdat in self.mcdat_dict, f"Unknown mcdat: {mcdat}. Available mcats: {list(self.mcdat_dict.keys())}"
