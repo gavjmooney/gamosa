@@ -43,6 +43,13 @@ class MetricsSuite():
                 self.metrics[metric]["weight"] = metric_weights[metric]
 
         self.initial_weights = metric_weights
+        metrics_to_remove = []
+        for metric, weight in self.initial_weights.items():
+            if weight == 0:
+                metrics_to_remove.append(metric)
+
+        for metric in metrics_to_remove:
+            self.initial_weights.pop(metric)
 
         # Check metric combination strategy is valid
         assert mcdat in self.mcdat_dict, f"Unknown mcdat: {mcdat}. Available mcats: {list(self.mcdat_dict.keys())}"
@@ -983,8 +990,9 @@ class MetricsSuite():
 
 if __name__ == "__main__":
     
-    ms = MetricsSuite("..\\..\\graphs\\moon\\test_10_10_SYM0625.graphml", metric_weights={"edge_crossing":1, "gabriel_ratio":2, "edge_length":1}, mcdat="weighted_prod")
+    ms = MetricsSuite("..\\..\\graphs\\moon\\test_10_10_SYM0625.graphml", metric_weights={"edge_crossing":1, "gabriel_ratio":2, "edge_length":1}, mcdat="weighted_sum")
     ms.pretty_print_metrics()
+    #print(ms.initial_weights)
     #print(ms.get_bounding_box())
     #ms.node_area()
     #print(ms.graph.nodes)
