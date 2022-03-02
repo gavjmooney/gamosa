@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from tests import *
 import os
-
+import random
 
 def main2():
 
@@ -46,23 +46,157 @@ def main2():
     sa.plot_temperatures2()
 
 
-def perform_sa(graph, metrics):
+def perform_sa(graph, metrics, initial, cooling, next_step, poly=0):
 
-    #ms = MetricsSuite(graph, metrics.keys(), metrics)
+    ms = MetricsSuite(PATH + graph, metrics)
+    #ms.write_graph("..\\..\\graph_drawings\\simulated_annealing\\EC-1_INITIAL-random_COOLING-linear_STEP-random-bounded\\__SA_" + graph)
+    sa = SimulatedAnnealing(ms, initial, cooling, 0, 100, 0.6, next_step, 1, 1000, 60, 0, 0, n_polygon_sides=poly)
 
-    sa = SimulatedAnnealing(graph=graph, )
+    G = sa.anneal()
+    return G
 
+
+def experiment_random_linear(filename, outfile, weights):
+    G = perform_sa(filename, weights, "random", "linear_a", "random_bounded")
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_random_quadratic(filename, outfile, weights):
+    G = perform_sa(filename, weights, "random", "quadratic_a", "random_bounded")
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_grid_linear(filename, outfile, weights):
+    G = perform_sa(filename, weights, "grid", "linear_a", "random_bounded")
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_grid_quadratic(filename, outfile, weights):
+    G = perform_sa(filename, weights, "grid", "quadratic_a", "random_bounded")
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_poly3_linear(filename, outfile, weights):
+    G = perform_sa(filename, weights, "polygon", "linear_a", "random_bounded", poly=3)
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_poly3_quadratic(filename, outfile, weights):
+    G = perform_sa(filename, weights, "polygon", "quadratic_a", "random_bounded", poly=3)
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_poly5_linear(filename, outfile, weights):
+    G = perform_sa(filename, weights, "polygon", "linear_a", "random_bounded", poly=5)
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_poly5_quadratic(filename, outfile, weights):
+    G = perform_sa(filename, weights, "polygon", "quadratic_a", "random_bounded", poly=5)
+    ms_G = MetricsSuite(G)
+    ms_G.write_graph(outfile)
+
+def experiment_metric_loop(filename, i):
+    metrics = {"edge_crossing": "EC",
+                "edge_orthogonality": "EO",
+                "angular_resolution": "AR",
+                "edge_length": "EL",
+                "gabriel_ratio": "GR",
+                "crossing_angle": "CA",
+    }
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-random_COOLING-linear_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-random_COOLING-linear_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-random_COOLING-linear_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_random_linear(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-random_COOLING-quadratic_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-random_COOLING-quadratic_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-random_COOLING-quadratic_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_random_quadratic(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-grid_COOLING-linear_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-grid_COOLING-linear_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-grid_COOLING-linear_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_grid_linear(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-grid_COOLING-quadratic_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-grid_COOLING-quadratic_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-grid_COOLING-quadratic_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_grid_quadratic(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly3_COOLING-linear_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly3_COOLING-linear_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-poly3_COOLING-linear_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_poly3_linear(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly3_COOLING-quadratic_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly3_COOLING-quadratic_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-poly3_COOLING-quadratic_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_poly3_quadratic(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly5_COOLING-linear_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly5_COOLING-linear_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-poly5_COOLING-linear_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_poly5_linear(filename, outfile, {metric: 1})
+
+    for metric in metrics:
+        # path = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly5_COOLING-quadratic_STEP-random-bounded\\"
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # outfile = "..\\..\\graph_drawings\\simulated_annealing\\" + metrics[metric] + "-1_INITIAL-poly5_COOLING-quadratic_STEP-random-bounded\\SA_" + filename
+        outfile = "..\\..\\graph_drawings\\simulated_annealing\\SA-" + str(i) + "_" + metrics[metric] + "-1_INITIAL-poly5_COOLING-quadratic_STEP-random-bounded_" + filename
+        print(metric)
+        experiment_poly5_quadratic(filename, outfile, {metric: 1})
 
 def main():
     
-
+    # Get file names
     directory = os.fsencode(PATH)
-
+    fnames = []
     for file in os.listdir(directory):
-        filename = os.fsdecode(file)
+        fnames.append(os.fsdecode(file))
+
+
+
+    # Select random sample
+    graphs = random.sample(fnames, 10)
+    i = 1
+    for graph in graphs:
+        print(graph)
+        experiment_metric_loop(graph, i)
+        i += 1
         
-        
-        ms = MetricsSuite
+    
+
     
 
 if __name__ == "__main__":

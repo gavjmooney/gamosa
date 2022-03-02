@@ -175,6 +175,7 @@ class TestMetricsSuiteSymmetry(unittest.TestCase):
         self.assertEqual(0, ms.symmetry())
         # Threshold set to 1 as a triangle when split by bisector will only have one symmetry at each axis
         ms.sym_threshold = 1
+        ms.sym_tolerance= 0
         self.assertAlmostEqual(0.251, ms.symmetry(), 3) # 4330 / 17250 ~= 0.251
         
         # Tolerance set to 1 as an equilateral triangle cannot be represented by three vertexes without at least one irrational vertex

@@ -74,7 +74,7 @@ class SimulatedAnnealing():
         # Setup additional parameters for next step
         self.n_nodes_random_step = n_nodes_random_step
         bb = self.metric_suite.get_bounding_box(self.metric_suite.graph)
-        self.initial_step_bound_radius = self.metric_suite._euclidean_distance((bb[0][0],bb[0][1]), (bb[1][0],bb[1][1])) / 2
+        self.initial_step_bound_radius = self.metric_suite._euclidean_distance((bb[0][0],bb[0][1]), (bb[1][0],bb[1][1])) / 5
         self.step_bound_radius = self.initial_step_bound_radius
 
         self.next_step = self.next_steps[next_step]
@@ -289,7 +289,7 @@ class SimulatedAnnealing():
 
         pos = nx.random_layout(graph)
         for k,v in pos.items():
-            pos[k] = {"x":v[0], "y":v[1]}
+            pos[k] = {"x":v[0]*graph.number_of_nodes()*20, "y":v[1]*graph.number_of_nodes()*20}
 
         nx.set_node_attributes(graph, pos)
 
@@ -327,8 +327,8 @@ class SimulatedAnnealing():
         """Move the position of n random nodes to a new random position, bounded by a circle of decreasing size, where n is defined 
         in self.n_nodes_random_step"""
         
-        ms = MetricsSuite(graph)
-        bb = ms.get_bounding_box()
+        #ms = MetricsSuite(graph)
+        #bb = ms.get_bounding_box()
 
 
         for random_node in rand.sample(list(graph.nodes), self.n_nodes_random_step):
@@ -397,7 +397,7 @@ class SimulatedAnnealing():
         self.n_accepted, self.n_total = 0, 0 # for statistical purposes
 
         for i in range(self.n_iters):
-            #print(i)
+            print(i)
             # If all the metrics are satisfactory, exit the algorithm early
             #if self._check_satisfactory(best_ms):
             #    break
