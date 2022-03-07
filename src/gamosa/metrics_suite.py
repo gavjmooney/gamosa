@@ -1054,6 +1054,8 @@ class MetricsSuite():
 
 
     def symmetry(self, G=None, show_sym=False):
+        if self.metrics["edge_crossing"]["num_crossings"] > 50:
+            return 0
         threshold = self.sym_threshold
         tolerance = self.sym_tolerance
 
