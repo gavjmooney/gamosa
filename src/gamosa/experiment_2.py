@@ -9,6 +9,43 @@ import os
 import random
 import shutil
 
+def main2():
+
+    filename = "..\\..\\graphs\\moon\\ca.graphml"
+
+    ms = MetricsSuite(filename)
+    #ms.calculate_metric("angular_resolution")
+    #ms.pretty_print_metrics()
+    G = ms.graph
+
+    weights = { "edge_crossing":1}   
+    #weights = { "angular_resolution":1, "edge_length":1}   
+    #weights = { "gabriel_ratio":1, "node_resolution":1}   
+    #weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
+    # weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
+    #weights = { "node_resolution":1, "edge_length":1 }
+    sa = SimulatedAnnealing(filename, metrics_list=list(weights.keys()), weights=weights, cooling_schedule="linear_m", n_iters=1000, initial_config="grid", next_step="random_bounded")
+
+    G2 = sa.anneal()
+    
+
+    fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
+
+    nx.draw(G, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G.nodes(data=True)]}, ax=ax2)
+    
+    nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
+
+    ms2 = MetricsSuite(G2, metrics_list=weights.keys())
+    #ms2.calculate_metrics()
+    #ms2.pretty_print_metrics()
+
+    plt.show()
+
+    sa.n_iters = 100
+    sa.t_max = 1
+    
+
+    sa.plot_temperatures2()
 
 
 def perform_sa(graph, metrics, initial, outfile_i, poly=0):
@@ -18,6 +55,7 @@ def perform_sa(graph, metrics, initial, outfile_i, poly=0):
     ms.write_graph(outfile_i, sa.initial_config)
     G = sa.anneal()
     return {"i":sa.initial_config, "f":G}
+
 
 
 
@@ -33,16 +71,13 @@ def do_experiment(filename, outfile_i, outfile_f, stat_file, weights, initial_cf
     ms_G2 = MetricsSuite(GS["f"], all_metrics)
     ms_G.write_graph(outfile_f)
     
-    line_list = [outfile_f[61]+outfile_f[62]+outfile_f[64:]]
+    line_list = [outfile_f[63:]]
     line_list.extend([str(m) for m in get_multi_metric_weights(metrics, weights)])
     line_list.append(initial_cfg)
     a = ms_i.combine_metrics()
     a2 = ms_i2.combine_metrics()
     b = ms_G.combine_metrics()
     c = ms_G2.combine_metrics()
-    mi = [str(ms_i2.metrics[met]["value"]) if ms_i2.metrics[met]["value"] != None else "None"  for met in metrics]
-    mf = [str(ms_G2.metrics[met]["value"]) if ms_G2.metrics[met]["value"] != None else "None"  for met in metrics]
-    line_list.extend(mi)
     if a:
         a = str(round(a,3))
     else:
@@ -61,7 +96,6 @@ def do_experiment(filename, outfile_i, outfile_f, stat_file, weights, initial_cf
         c = "None"
     line_list.append(a)
     line_list.append(a2)
-    line_list.extend(mf)
     line_list.append(b)
     line_list.append(c)
 
@@ -130,23 +164,17 @@ def experiment_loop(filename, i):
 
     initials = ["random", "grid", "poly3", "poly5"]
 
-    # experiments = {"1":{"edge_crossing":1, "angular_resolution":1},
-    #             "2":{"edge_crossing":1, "edge_orthogonality":1},
-    #             "3":{"edge_length":1, "edge_orthogonality":1},
-    #             "4":{"edge_crossing":1, "gabriel_ratio":1},
-    #             "5":{"angular_resolution":1, "gabriel_ratio":1},
-    #             "6":{"edge_crossing":1, "angular_resolution":1, "gabriel_ratio":1},
-    #             "7":{"edge_crossing":1, "edge_orthogonality":1, "edge_length":1},
-    #             "8":{"edge_crossing":1, "angular_resolution":1, "edge_length":1, "gabriel_ratio":1}
-    # }
-    experiments = {"1":{"edge_crossing":1},
-                "2":{"edge_orthogonality":1},
-                "3":{"angular_resolution":1},
-                "4":{"edge_length":1},
-                "5":{"gabriel_ratio":1},
+    experiments = {"1":{"edge_crossing":1, "angular_resolution":1},
+                "2":{"edge_crossing":1, "edge_orthogonality":1},
+                "3":{"edge_length":1, "edge_orthogonality":1},
+                "4":{"edge_crossing":1, "gabriel_ratio":1},
+                "5":{"angular_resolution":1, "gabriel_ratio":1},
+                "6":{"edge_crossing":1, "angular_resolution":1, "gabriel_ratio":1},
+                "7":{"edge_crossing":1, "edge_orthogonality":1, "edge_length":1},
+                "8":{"edge_crossing":1, "angular_resolution":1, "edge_length":1, "gabriel_ratio":1}
     }
 
-    stat_file = "..\\..\\data\\experiment.csv"
+    stat_file = "..\\..\\data\\experiment_2.csv"
     with open(stat_file, "a") as stat_f:
 
         # legend = "filename,EC,EO,AR,EL,GR,Initial Config,Initial Evaluation(Chosen Metrics),Initial Evaluation(All Metrics),Final Evaluation(Chosen Metrics),Final Evaluation(All Metrics)\n"
@@ -156,17 +184,17 @@ def experiment_loop(filename, i):
             
             for cfg in initials:
 
-                outfile_i = "..\\..\\graph_drawings\\simulated_annealing\\experiment_drawings\\G" + str(i) + "I" +"_" + get_multi_metric_fname(metrics, experiments[exp]) + "_INITIAL-" + cfg + ".graphml"
-                outfile_f = "..\\..\\graph_drawings\\simulated_annealing\\experiment_drawings\\G" + str(i) + "F" +"_" + get_multi_metric_fname(metrics, experiments[exp]) + "_INITIAL-" + cfg + ".graphml"
+                outfile_i = "..\\..\\graph_drawings\\simulated_annealing\\experiment_2_drawings\\G" + str(i) + "I" +"_" + get_multi_metric_fname(metrics, experiments[exp]) + "_INITIAL-" + cfg + ".graphml"
+                outfile_f = "..\\..\\graph_drawings\\simulated_annealing\\experiment_2_drawings\\G" + str(i) + "F" +"_" + get_multi_metric_fname(metrics, experiments[exp]) + "_INITIAL-" + cfg + ".graphml"
                 do_experiment(filename, outfile_i, outfile_f, stat_f, experiments[exp], cfg, metrics)
             
 
 
 
 def main():
-    stat_file = "..\\..\\data\\experiment.csv"
+    stat_file = "..\\..\\data\\experiment_2.csv"
     with open(stat_file, "w") as stat_f:
-        legend = "filename,EC,EO,AR,EL,GR,Initial Config,i_EC,i_EO,i_AR,i_EL,i_GR,Initial Evaluation(Chosen Metrics),Initial Evaluation(All Metrics),f_EC,f_EO,f_AR,f_EL,f_GR,Final Evaluation(Chosen Metrics),Final Evaluation(All Metrics)\n"
+        legend = "filename,EC,EO,AR,EL,GR,Initial Config,Initial Evaluation(Chosen Metrics),Initial Evaluation(All Metrics),Final Evaluation(Chosen Metrics),Final Evaluation(All Metrics)\n"
         stat_f.write(legend)
     
     # Get file names
@@ -180,7 +208,7 @@ def main():
     graphs = random.sample(fnames, 1)
     i = 1
     for graph in graphs:
-        shutil.copyfile(PATH + graph, "..\\..\\graphs\\experiment\\G" + str(i) + "_" + graph)
+        shutil.copyfile(PATH + graph, "..\\..\\graphs\\experiment_2\\G" + str(i) + "_" + graph)
         print(graph)
         experiment_loop(graph, i)
         i += 1

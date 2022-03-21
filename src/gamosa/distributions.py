@@ -152,9 +152,9 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
                 "crossing_angle": 0,
     } 
 
-    with open(out_file, "w") as out_f:
-        header = "filename,EC,EO,NO,AR,SYM,NR,EL,GR,CA,time\n"
-        out_f.write(header)
+    with open(out_file, "a") as out_f:
+        # header = "filename,EC,EO,NO,AR,SYM,NR,EL,GR,CA,crossings,time\n"
+        # out_f.write(header)
     
     
         i = 0
@@ -199,7 +199,8 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
                         ms.metrics["node_resolution"]["value"],
                         ms.metrics["edge_length"]["value"],
                         ms.metrics["gabriel_ratio"]["value"],
-                        ms.metrics["crossing_angle"]["value"]
+                        ms.metrics["crossing_angle"]["value"],
+                        ms.metrics["edge_crossing"]["num_crossings"]
             ]
             
             time_b = time.time()
@@ -213,7 +214,8 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
 
     summary = f"Average nodes: {total_nodes/i}\nAverage edges: {total_edges/i}\nAverage time: {total_time/i}"
     print(summary)
-    with open(stat_file, "w") as out_f:
+    with open(stat_file, "a") as out_f:
+        out_f.write("\n\n")
         out_f.write(summary)
 
 def main():

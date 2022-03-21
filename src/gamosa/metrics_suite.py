@@ -399,13 +399,11 @@ class MetricsSuite():
         return 1 - (angles_sum / self.graph.number_of_nodes()) if all_nodes else 1 - (angles_sum / nodes_count)
 
 
-    def crossing_angle(self):
+    def crossing_angle(self, crossing_limit=150):
         if self.metrics["edge_crossing"]["num_crossings"] is None:
             self.calculate_metric("edge_crossing")
 
-        # if self.metrics["edge_crossing"]["num_crossings"] < 100:
-        #     return None
-        if self.metrics["edge_crossing"]["num_crossings"] > 50:
+        if self.metrics["edge_crossing"]["num_crossings"] > crossing_limit:
             return 0
 
         G = self.crosses_promotion()
@@ -1053,8 +1051,8 @@ class MetricsSuite():
         return points
 
 
-    def symmetry(self, G=None, show_sym=False):
-        if self.metrics["edge_crossing"]["num_crossings"] > 50:
+    def symmetry(self, G=None, show_sym=False, crosses_limit=50):
+        if self.metrics["edge_crossing"]["num_crossings"] > crosses_limit:
             return 0
         threshold = self.sym_threshold
         tolerance = self.sym_tolerance
@@ -1274,14 +1272,16 @@ if __name__ == "__main__":
     
     #ms = MetricsSuite("..\\..\\graph_drawings\\asonam\\c-data-30-4.graphml", metric_weights={"edge_length":1}, mcdat="weighted_sum")
     #ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\B_LFR_FR_ABCDE_fr_0_data-50.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
-    ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\B_LFR_FR_ABCDE_fr_1000_data-30.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
+    ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\M_LFR_FR1_ABCDE_fr_495_data-70.graphml", metric_weights={"edge_crossing":1}, mcdat="weighted_sum")
+    ms.calculate_metrics()
+    print(ms.metrics["edge_crossing"]["num_crossings"])
 
     # odd case with 88 crossings but actually only 85.
     #ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\B_LFR_HOLA_ABCDE_105__hola_data-50.gml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
     #ms = MetricsSuite("B_LFR_HOLA_ABCDE_105__hola_data-50_cp.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
 
     # ms = MetricsSuite("..\\..\\graphs\\moon\\test_7_7_CA1.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
-    G = ms.crosses_promotion()
+    #G = ms.crosses_promotion()
     # print(ms.metrics['edge_crossing'])
     # print(ms.count_crossings(G))
     #ms.pretty_print_metrics()

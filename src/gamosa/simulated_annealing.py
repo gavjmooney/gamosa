@@ -190,8 +190,8 @@ class SimulatedAnnealing():
 
 
         sides = self.n_polygon_sides
-        length = self.initial_dist
         n = graph.number_of_nodes()
+        length = self.initial_dist * n / sides
 
         polygon_corners = []
         x, y = 0, 0
