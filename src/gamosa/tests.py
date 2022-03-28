@@ -9,7 +9,6 @@ import unittest
 
 class TestMetricsSuiteGeneral(unittest.TestCase):
 
-
     def test_load(self):
         filename = PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml"
         ms = MetricsSuite(filename)
@@ -20,6 +19,20 @@ class TestMetricsSuiteGeneral(unittest.TestCase):
         
         for pos in node_positions:
             self.assertIn(pos, known_positions)
+
+    def test_load_error(self):
+        self.assertRaises(TypeError, MetricsSuite, 1234)
+        self.assertRaises(TypeError, MetricsSuite, True)
+
+        try:
+            MetricsSuite(nx.sedgewick_maze_graph())
+        except  Exception as e:
+            self.fail(f"MetricSuite raised exception: {e}")
+
+        try:
+            MetricsSuite(PATH + "test_6_5_AR1_EO1_EC1_SYM1_EL1_GR1_NO05.graphml")
+        except  Exception as e:
+            self.fail(f"MetricSuite raised exception: {e}")
 
     def test_write(self):
         G = nx.sedgewick_maze_graph()

@@ -9,8 +9,8 @@ from write_graph import write_graphml_pos
 
 class MetricsSuite():
     """A suite for calculating several metrics for graph drawing aesthetics, as well as methods for combining these into a single cost function.
-    Takes as an argument an optional list of metrics to calculate (only edge crossings by default) and an optional method for combining them (weighted sum by default).
-    Also takes an optional dictionary of metric:weight values defining the relative weight of each metric. Without this dictionary all weights are defaulted to 1"""
+    Takes as an argument a path to a GML or GraphML file, or a NetworkX Graph object. Also takes as an arhument a dictionary of metric:weight key/values.
+    Note: to prevent unnecessary calculations, omit metrics with weight 0."""
 
     def __init__(self, graph=None, metric_weights=None, mcdat="weighted_sum", sym_threshold=2, sym_tolerance=3, file_type="GraphML"):
 
@@ -28,7 +28,6 @@ class MetricsSuite():
         self.mcdat_dict = {"weighted_sum":self._weighted_sum,
                            "weighted_prod":self._weighted_prod,
         }
-        self.fname = graph
 
         # Check all metrics given are valid and assign weights
         if metric_weights:
@@ -63,10 +62,13 @@ class MetricsSuite():
         if graph is None:
             self.graph = self.load_graph_test()
         elif isinstance(graph, str):
+            self.fname = graph
             self.graph = self.load_graph(graph, file_type=file_type)
-        else:
-            # TODO: Should check that it is nx graph explicitly and throw error otherwise
+        elif isinstance(graph, nx.Graph):
+            self.fname = ""
             self.graph = graph
+        else:
+            raise TypeError(f"'graph' must be a string representing a path to a GML or GraphML file, or a NetworkX Graph object, not {type(graph)}")
 
         # Check symmetry parameters
         if type(sym_tolerance) != int and type(sym_tolerance) != float:
@@ -101,7 +103,6 @@ class MetricsSuite():
 
     def load_graph_test(self, nxg=nx.sedgewick_maze_graph):
         """Loads a test graph with a random layout."""
-        #G = nx.sedgewick_maze_graph()
         G = nxg()
         pos = nx.random_layout(G)
         for k,v in pos.items():
@@ -1052,6 +1053,7 @@ class MetricsSuite():
 
 
     def symmetry(self, G=None, show_sym=False, crosses_limit=50):
+        self.calculate_metric("edge_crossing")
         if self.metrics["edge_crossing"]["num_crossings"] > crosses_limit:
             return 0
         threshold = self.sym_threshold

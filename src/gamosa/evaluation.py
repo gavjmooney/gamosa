@@ -36,6 +36,25 @@ def main_2():
     file = "..\\..\\data\\experiment_2.csv"
     df = pd.read_csv(file)
 
+    # Convert to float
+    df['Final Evaluation(Chosen Metrics)'] = pd.to_numeric(df['Final Evaluation(Chosen Metrics)'], downcast='float')
+    df['Initial Evaluation(Chosen Metrics)'] = pd.to_numeric(df['Initial Evaluation(Chosen Metrics)'], downcast='float')
+    df['Final Evaluation(All Metrics)'] = pd.to_numeric(df['Final Evaluation(All Metrics)'], downcast='float')
+    df['Initial Evaluation(All Metrics)'] = pd.to_numeric(df['Initial Evaluation(All Metrics)'], downcast='float')
+
+    # Calculate improvments in metrics
+    df['all_diff'] = df['Final Evaluation(All Metrics)'] - df['Initial Evaluation(All Metrics)']
+    df['chosen_diff'] = df['Final Evaluation(Chosen Metrics)'] - df['Initial Evaluation(Chosen Metrics)']
+
+
+    #general(df)
+    #which_initial_cfg_2(df)
+
+def main_3():
+    # Read file
+    file = "..\\..\\data\\experiment_100.csv"
+    df = pd.read_csv(file)
+
 
     # Convert to float
     df['Final Evaluation(Chosen Metrics)'] = pd.to_numeric(df['Final Evaluation(Chosen Metrics)'], downcast='float')
@@ -47,8 +66,16 @@ def main_2():
     df['all_diff'] = df['Final Evaluation(All Metrics)'] - df['Initial Evaluation(All Metrics)']
     df['chosen_diff'] = df['Final Evaluation(Chosen Metrics)'] - df['Initial Evaluation(Chosen Metrics)']
 
-    general(df)
+    df['EC_diff'] = df['f_EC'] - df['i_EC']
+    df['EO_diff'] = df['f_EO'] - df['i_EO']
+    df['AR_diff'] = df['f_AR'] - df['i_AR']
+    df['EL_diff'] = df['f_EL'] - df['i_EL']
+    df['GR_diff'] = df['f_GR'] - df['i_GR']
+
+    #general(df)
+    #which_metric2(df)
     #which_initial_cfg_2(df)
+    metric_improvments(df)
 
 def general(df):
 
@@ -185,6 +212,31 @@ def which_metric(df):
 
 
 
+def which_metric_other_metrics(df, metric, metrics):
+    # EC_df = df[df['EC'] == 1]
+    # EO_df = df[df['EO'] == 1]
+    # AR_df = df[df['AR'] == 1]
+    # EL_df = df[df['EL'] == 1]
+    # GR_df = df[df['GR'] == 1]
+
+    mdf = df[df[metric] == 1]
+
+    for m in metrics:
+        avg_improvement = round(mdf[m+"_diff"].mean(), 3)
+        print(f"{metric} improves {m} by {avg_improvement}")
+
+
+def metric_improvments(df):
+    metrics = ["EC", "EO", "AR", "EL", "GR"]
+    for m in metrics:
+        which_metric_other_metrics(df, m, metrics)
+        print()
+
+
+def which_cfg3(df):
+    #df[df['ids'].str.contains("ball")]
+    pass
+
 
 if __name__ == "__main__":
-    main_2()
+    main_3()
