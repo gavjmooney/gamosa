@@ -1,77 +1,83 @@
 from metrics_suite import MetricsSuite
-import networkx as nx
 from simulated_annealing import SimulatedAnnealing
-from matplotlib import pyplot as plt
-import numpy as np
-from tests import *
-import pandas as pd
+import os
+
+
+def get_distributions(input_directory, output_file, metric_weights):
+
+    with open(output_file, "w") as out_f:
+        
+        legend = "filename,EC,EO,NO,AR,SYM,NR,EL,GR,CA,num_crossings\n"
+        out_f.write(legend)
+
+        i = 0
+        directory = os.fsencode(input_directory)
+        for file in os.listdir(directory):
+            percent_done = i/len(os.listdir(directory))*100
+            if i % 10 == 0:
+                print(f"{percent_done:.2f}%")
+
+            filename = os.fsdecode(file)
+            
+            
+            ms = MetricsSuite(input_directory + filename, metric_weights)
+            ms.calculate_metrics()
+            #ms.pretty_print_metrics()
+            
+            values = [ms.metrics["edge_crossing"]["value"],
+                        ms.metrics["edge_orthogonality"]["value"],
+                        ms.metrics["node_orthogonality"]["value"],
+                        ms.metrics["angular_resolution"]["value"],
+                        ms.metrics["symmetry"]["value"],
+                        ms.metrics["node_resolution"]["value"],
+                        ms.metrics["edge_length"]["value"],
+                        ms.metrics["gabriel_ratio"]["value"],
+                        ms.metrics["crossing_angle"]["value"],
+                        ms.metrics["edge_crossing"]["num_crossings"],
+            ]
+
+            line = filename + "," + ",".join(str(round(v, 3)) if v != None else "None" for v in values) + "\n"
+            out_f.write(line)
+
+            i += 1
+
+
+def simulated_annealing_example(filename, metric_weights):
+    ms = MetricsSuite(filename, metric_weights)
+
+    sa = SimulatedAnnealing(ms, initial_config="polygon", cooling_schedule="quadratic_a", n_polygon_sides=6)
+    
+    initial_graph_drawing = sa.initial_config
+    ms_initial = MetricsSuite(initial_graph_drawing, metric_weights)
+    
+    annealed_graph_drawing = sa.anneal()
+    ms_annealed = MetricsSuite(annealed_graph_drawing, metric_weights)
+
+    ms_initial.draw_graph()
+    ms_initial.pretty_print_metrics()
+    
+    ms_annealed.draw_graph()
+    ms_annealed.pretty_print_metrics()
 
 
 def main():
+    # Change Me
+    dir = "..\\..\\graphs\\north\\"
+    output_file = "..\\..\\data\\test.csv"
+    metric_weights = {"edge_crossing": 1,
+                "edge_orthogonality": 0,
+                "node_orthogonality": 0,
+                "angular_resolution": 0,
+                "symmetry": 0,
+                "node_resolution": 0,
+                "edge_length": 0,
+                "gabriel_ratio": 1,
+                "crossing_angle": 0,
+    }
 
-    filename = "..\\..\\graphs\\moon\\poly.graphml"
-    filename = "..\\..\\graph_drawings\\nathan\\B_BB_FR_ABC_fr_10_data_110_BB.graphml"
+    get_distributions(dir, output_file, metric_weights)
+    simulated_annealing_example("..\\..\\graphs\\rome\\grafo147.29.graphml", metric_weights)
 
-    #ms = MetricsSuite(filename)
-    #ms.calculate_metric("angular_resolution")
-    #ms.pretty_print_metrics()
-    #G = ms.graph
-
-    #weights = { "crossing_angle":1}   
-    #weights = { "angular_resolution":1, "edge_length":1}   
-    #weights = { "gabriel_ratio":1, "node_resolution":1}   
-    #weights = {"edge_length":1, "edge_crossing":2, "node_resolution":1, "angular_resolution":1, "gabriel_ratio":1}
-    # weights = { "edge_crossing":5, "node_resolution":1, "angular_resolution":1, "edge_length":1 }
-    #weights = { "node_resolution":1, "edge_length":1 }
-    #ms = MetricsSuite(filename, weights)
-    #sa = SimulatedAnnealing(ms, cooling_schedule="linear_a", n_iters=1000, initial_config="polygon",next_step="random_bounded", n_polygon_sides=5)
-
-    #ms.draw_graph(sa.initial_config)
-    #ms.write_graph("polyout.graphml", sa.initial_config)
-    #ms.calculate_metrics()
-    #ms.pretty_print_metrics()
-    #G2 = sa.anneal()
-    
-
-    #fig1, (ax2, ax3) = plt.subplots(nrows=2, ncols=1)
-
-    #ms.draw_graph(sa.initial_config)
-    #ms.draw_graph(G2)
-
-    #nx.draw(sa.initial_config, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in sa.initial_config.nodes(data=True)]}, ax=ax2)
-    
-    #nx.draw(G2, pos={k:np.array((v["x"], v["y"]),dtype=np.float32) for (k, v) in[u for u in G2.nodes(data=True)]}, ax=ax3)
-
-    #ms2 = MetricsSuite(G2, weights)
-    #ms2.calculate_metrics()
-    #ms2.pretty_print_metrics()
-
-    #plt.show()
-
-    # sa.n_iters = 100
-    # sa.t_max = 1
-    
-
-    # sa.plot_temperatures2()
-    stat_file = "..\\..\\data\\experiment_100_old.csv"
-
-    df = pd.read_csv(stat_file)
-    skip = ["filename", "Initial Config", "EC", "EO", "EL", "AR", "GR"]
-
-    for col in df:
-        if col in skip:
-            continue
-        df[col] = pd.to_numeric(df[col], downcast="float")
-        df[col] = df[col].round(3)
-
-    new_fnames = []
-    for fname in df["filename"]:
-        new_fnames.append(fname[3:])
-
-    df["filename"] = new_fnames
-
-    stat_file = "..\\..\\data\\experiment_100.csv"
-    df.to_csv(stat_file)
 
 if __name__ == "__main__":
-    main()
+    main()    

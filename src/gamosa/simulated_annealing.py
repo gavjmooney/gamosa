@@ -386,7 +386,7 @@ class SimulatedAnnealing():
         return num_perfect_metrics == num_metrics
 
 
-    def anneal(self, print_stats=True):
+    def anneal(self, print_stats=False):
         # Get initial config and set best layout to the initial layout
         best_ms = MetricsSuite(self.initial_config, self.metric_suite.initial_weights, self.metric_suite.mcdat)
         best = self.initial_config.copy()
@@ -530,3 +530,7 @@ class SimulatedAnnealing():
         plt.legend()
 
         plt.show()
+
+
+if __name__ == "__main__":
+    pass

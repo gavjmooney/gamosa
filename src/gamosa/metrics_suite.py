@@ -657,80 +657,6 @@ class MetricsSuite():
         return crosses_promoted_G
 
 
-    def intersect_line_line(self, P0, P1, Q0, Q1):  
-        d = (P1[0]-P0[0]) * (Q1[1]-Q0[1]) + (P1[1]-P0[1]) * (Q0[0]-Q1[0]) 
-        if d == 0:
-            return None
-        t = ((Q0[0]-P0[0]) * (Q1[1]-Q0[1]) + (Q0[1]-P0[1]) * (Q0[0]-Q1[0])) / d
-        u = ((Q0[0]-P0[0]) * (P1[1]-P0[1]) + (Q0[1]-P0[1]) * (P0[0]-P1[0])) / d
-        if 0 <= t <= 1 and 0 <= u <= 1:
-            return P1[0] * t + P0[0] * (1-t), P1[1] * t + P0[1] * (1-t)
-        return None
-
-
-    def crosses_promotion2(self):
-        crosses_promoted_G = self.graph.copy()
-        for node in crosses_promoted_G:
-            crosses_promoted_G.nodes[node]["type"] = "major"
-
-        if self.metrics["edge_crossing"]["num_crossings"] is None:
-            self.calculate_metric("edge_crossing")
-
-        #print(self.metrics["edge_crossing"]["num_crossings"])
-
-
-        num_crossings = self.metrics["edge_crossing"]["num_crossings"]
-        lines = []
-        for edge in crosses_promoted_G.edges():
-            source_x, source_y = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
-            target_x, target_y = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
-            lines.append((source_x, source_y, target_x, target_y))
-
-        intersectionPoints = []
-        for i, line1 in enumerate(lines):
-            for line2 in lines[i:]:
-                isectP = self.intersect_line_line(line1[:2], line1[2:], line2[:2], line2[2:])
-                if isectP:
-                    intersectionPoints.append((line1, line2, isectP))
-
-        nodes_to_add = []
-        for point in intersectionPoints:
-            if not (point[2][0] in point[0] and point[2][1] in point[0]) or not (point[2][0] in point[1] and point[2][1] in point[1]):
-                nodes_to_add.append(point)
-        
-        for point in nodes_to_add:
-            label = "c" + str(len(crosses_promoted_G.nodes()))
-
-            crosses_promoted_G.add_node(label)
-
-            crosses_promoted_G.nodes[label]["label"] = '\n'
-            crosses_promoted_G.nodes[label]["shape_type"] = "ellipse"
-            crosses_promoted_G.nodes[label]["x"] = point[2][0]
-            crosses_promoted_G.nodes[label]["y"] = point[2][1]
-            crosses_promoted_G.nodes[label]["type"] = "minor"
-
-            node1 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[0][0] and v['y']==point[0][1]][0]
-            node2 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[0][2] and v['y']==point[0][3]][0]
-            crosses_promoted_G.add_edge(node1, label)
-            crosses_promoted_G.add_edge(label, node2)
-
-            node3 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[1][0] and v['y']==point[1][1]][0]
-            node4 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[1][2] and v['y']==point[1][3]][0]
-            crosses_promoted_G.add_edge(node3, label)
-            crosses_promoted_G.add_edge(label, node4)
-
-            try:
-                crosses_promoted_G.remove_edge(node1, node2)
-            except:
-                pass
-            try:
-                crosses_promoted_G.remove_edge(node3, node4)
-            except:
-                pass
-
-        return crosses_promoted_G
-    
-
     def _find_bisectors(self, G):
         """Returns the set of perpendicular bisectors between every pair of nodes"""
         bisectors = []
@@ -1204,47 +1130,7 @@ class MetricsSuite():
 
 
 if __name__ == "__main__":
-    
-    #ms = MetricsSuite("..\\..\\graph_drawings\\asonam\\c-data-30-4.graphml", metric_weights={"edge_length":1}, mcdat="weighted_sum")
-    #ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\B_LFR_FR_ABCDE_fr_0_data-50.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
-    ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\M_LFR_FR1_ABCDE_fr_495_data-70.graphml", metric_weights={"edge_crossing":1}, mcdat="weighted_sum")
-    ms.calculate_metrics()
-    print(ms.metrics["edge_crossing"]["num_crossings"])
-
-    # odd case with 88 crossings but actually only 85.
-    #ms = MetricsSuite("..\\..\\graph_drawings\\nathan\\B_LFR_HOLA_ABCDE_105__hola_data-50.gml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
-    #ms = MetricsSuite("B_LFR_HOLA_ABCDE_105__hola_data-50_cp.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
-
-    # ms = MetricsSuite("..\\..\\graphs\\moon\\test_7_7_CA1.graphml", metric_weights={"crossing_angle":1}, mcdat="weighted_sum")
-    #G = ms.crosses_promotion()
-    # print(ms.metrics['edge_crossing'])
-    # print(ms.count_crossings(G))
-    #ms.pretty_print_metrics()
-    # ms.write_graph("B_LFR_HOLA_ABCDE_105__hola_data-50_cp2.graphml", G)
-    # ms.draw_graph(G)
-    #ms.write_graph("test.graphml", G)
-    #ms.pretty_print_metrics()
-    #print(ms.initial_weights)
-    #print(ms.get_bounding_box())
-    #ms.node_area()
-    #print(ms.graph.nodes)
-    # a = ms.graph.nodes['n0']['x'], ms.graph.nodes['n0']['y']
-    # b = ms.graph.nodes['n3']['x'], ms.graph.nodes['n3']['y']
-    # print(ms._euclidean_distance(a, b))
-    #print(ms.node_resolution())
-    #print(ms.edge_length())
-    # for edge in ms.graph.edges:
-    #     print(ms._midpoint(edge[0], edge[1]))
-    #print(ms.gabriel_ratio())
-    #print(ms.symmetry())
-    #print(ms.angular_resolution())
-    #print(ms.symmetry(show_sym=True, tolerance=0, threshold=2))
-    #print(ms.angular_resolution(all_nodes=True))
-    #print(ms.node_orthogonality())
-    #print(ms.edge_crossing())
-    #print(ms.metrics["edge_crossing"]["num_crossings"])
-    #ms.draw_graph()
-    #print(ms.crossing_angle())
+    pass
 
 
 
