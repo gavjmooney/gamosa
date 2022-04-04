@@ -1,8 +1,5 @@
 # Adapted from: https://github.com/hadim/pygraphml/blob/master/pygraphml/graphml_parser.py
-
-
 from xml.dom import minidom
-import networkx as nx
 
 def write_graphml_pos(graph, filename):
 

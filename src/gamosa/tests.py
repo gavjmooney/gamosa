@@ -314,5 +314,5 @@ class TestMetricsSuiteCombinations(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    PATH = "..\\..\\graphs\\moon\\"
+    PATH = "..\\..\\graphs\\test_graphs\\"
     unittest.main()

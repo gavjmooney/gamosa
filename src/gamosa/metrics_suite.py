@@ -91,14 +91,14 @@ class MetricsSuite():
 
 
     def _weighted_prod(self):
-        """Returns the weighted product of all metrics."""
+        """Returns the weighted product of all metrics. Should NOT be used as a cost function - may be useful for comparing graphs."""
         return math.prod(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.initial_weights)
 
 
     def _weighted_sum(self):
-        """Returns the weighted sum of all metrics."""
+        """Returns the weighted sum of all metrics. Can be used as a cost function."""
         total_weight = sum(self.metrics[metric]["weight"] for metric in self.metrics)
-        return sum(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.initial_weights) / total_weight #len(self.metrics) > 0?
+        return sum(self.metrics[metric]["value"] * self.metrics[metric]["weight"] for metric in self.initial_weights) / total_weight
     
 
     def load_graph_test(self, nxg=nx.sedgewick_maze_graph):
@@ -114,8 +114,8 @@ class MetricsSuite():
 
     def load_graph(self, filename, file_type="GraphML"):
         """Loads a graph from a file."""
-        
 
+        # Accounts for some files which are actually GML files, but have the GraphML extension
         with open(filename) as f:
             first_line = f.readline()
             if first_line.startswith("graph"):
@@ -125,9 +125,12 @@ class MetricsSuite():
             G = nx.read_gml(filename)
             for node in G.nodes:
                 try:
+                    # Assign node attrbiutes for coordinate position of nodes
                     G.nodes[node]['x'] = float(G.nodes[node]['graphics']['x'])
                     G.nodes[node]['y'] = float(G.nodes[node]['graphics']['y'])
+
                 except KeyError:
+                    # Graph doesn't have positional attributes
                     #print("Graph does not contain positional attributes. Assigning them randomly.")
                     pos = nx.random_layout(G)
                     for k,v in pos.items():
@@ -143,9 +146,12 @@ class MetricsSuite():
 
             for node in G.nodes:
                 try:
+                    # Assign node attrbiutes for coordinate position of nodes
                     G.nodes[node]['x'] = float(G.nodes[node]['x'])
                     G.nodes[node]['y'] = float(G.nodes[node]['y'])
+
                 except KeyError:
+                    # Graph doesn't have positional attributes
                     #print("Graph does not contain positional attributes. Assigning them randomly.")
                     pos = nx.random_layout(G)
                     for k,v in pos.items():
@@ -166,7 +172,7 @@ class MetricsSuite():
 
 
     def write_graph(self, filename, graph=None, scale=False):
-        """Writes a graph to GraphML format. Will not preserve all attributes of a graph loaded from GraphML."""
+        """Writes a graph to GraphML format. May not preserve ALL attributes of a graph loaded from GraphML, but will save position of nodes."""
         if graph is None:
             graph = self.graph
 
@@ -194,7 +200,7 @@ class MetricsSuite():
 
 
     def calculate_metrics(self):
-        """Calculates the values of all metrics."""
+        """Calculates the values of all metrics with non-zero weights."""
         for metric in self.metrics:
             if self.metrics[metric]["weight"] != 0:
                 self.calculate_metric(metric)
@@ -209,9 +215,9 @@ class MetricsSuite():
         return self.mcdat_dict[self.mcdat]()
 
 
-    def draw_graph(self, graph=None, flip=False):
-        """Draws the graph using standard networkx methods with matplotlib. Due to the nature of the coordinate systems used,
-        Graphs will be flipped on the X axis. To see the graph the way it would be drawn in YeD, set flip to True"""
+    def draw_graph(self, graph=None, flip=True):
+        """Draws the graph using standard NetworkX methods with matplotlib. Due to the nature of the coordinate systems used,
+        graphs will be flipped on the X axis. To see the graph the way it would be drawn in yEd, set flip to True (default=True)."""
         if graph is None:
             graph = self.graph
 
@@ -225,6 +231,7 @@ class MetricsSuite():
 
 
     def pretty_print_metrics(self):
+        """Prints all metrics and their values in an easily digestible view."""
         self.calculate_metrics()
         print("-"*40)
         print("{:<20s}Value\tWeight".format("Metric"))
@@ -242,6 +249,7 @@ class MetricsSuite():
         
 
     def pretty_print_nodes(self, graph=None):
+        """Prints the nodes in the graph and their attributes"""
         if graph is None:
             graph = self.graph
         
@@ -283,6 +291,7 @@ class MetricsSuite():
         """Calculate the metric for the number of edge_crossing, scaled against the total
         number of possible crossings."""
 
+        # Estimate for the upper bound for the number of edge crossings
         m = self.graph.number_of_edges()
         c_all = (m * (m - 1))/2
         
@@ -290,8 +299,10 @@ class MetricsSuite():
         
         c_mx = c_all - c_impossible
         
+
         covered = []
         c = 0
+        # Iterate over all pairs of edges, checking if they intersect
         for e in self.graph.edges:
             
             a_p1 = (self.graph.nodes[e[0]]["x"], self.graph.nodes[e[0]]["y"]) # Position of source node of e
@@ -311,12 +322,11 @@ class MetricsSuite():
                     c += 1
 
         self.metrics["edge_crossing"]["num_crossings"] = c
-        return 1 - (c / c_mx) if c_mx > 0 else 1 # c_mx < 0 when |E| <= 2
+        return 1 - (c / c_mx) if c_mx > 0 else 1
 
-
+    # NOTE: Replaced by self.metrics["edge_Crossing"]["num_crossings"] in edge_Crossing function
     def count_crossings(self, G=None):
-        """Calculate the metric for the number of edge_crossing, scaled against the total
-        number of possible crossings."""
+        """Calculate the  number of edge crossings """
         if G is None:
             G = self.graph
 
@@ -343,8 +353,10 @@ class MetricsSuite():
 
 
     def edge_orthogonality(self):
+        """Calculate the metric for edge orthogonality."""
         ortho_list = []
 
+        # Iterate over each edge and get it's minimum angle relative to the orthogonal grid
         for e in self.graph.edges:
             source = e[0]
             target = e[1]
@@ -362,11 +374,12 @@ class MetricsSuite():
             edge_ortho = min(angle, abs(90-angle), 180-angle) /45
             ortho_list.append(edge_ortho)
 
+        # Return 1 minus the average of minimum angles
         return 1 - (sum(ortho_list) / self.graph.number_of_edges())
 
 
     def angular_resolution(self, all_nodes=False):
-
+        """Calculate the metric for angular resolution. If all_nodes is True, include nodes with degree 1, for which the angle will always be perfect."""
         angles_sum = 0
         nodes_count = 0
         for node in self.graph.nodes:
@@ -374,11 +387,12 @@ class MetricsSuite():
                 continue
 
             nodes_count += 1
-            ideal = 360 / self.graph.degree[node]
+            ideal = 360 / self.graph.degree[node] # Each node has an ideal angle for adjacent edges, based on the number of adjacent edges
 
             x1, y1 = self.graph.nodes[node]['x'], self.graph.nodes[node]['y']
             actual_min = 360
 
+            # Iterate over adjacent edges and calculate the difference of the minimum angle from the ideal angle
             for adj in self.graph.neighbors(node):
                 x2, y2 = self.graph.nodes[adj]['x'], self.graph.nodes[adj]['y']
                 angle1 = math.degrees(math.atan2((y2 - y1), (x2 - x1)))
@@ -397,10 +411,13 @@ class MetricsSuite():
 
             angles_sum += abs((ideal - actual_min) / ideal)
 
+        # Return 1 minus the average of minimum angles
         return 1 - (angles_sum / self.graph.number_of_nodes()) if all_nodes else 1 - (angles_sum / nodes_count)
 
 
     def crossing_angle(self, crossing_limit=150):
+        """Calculate the metric for the edge crossings angle. crossing_limit specifies the maximum number of crossings allowed, 
+        which is limited due to long execution times."""
         if self.metrics["edge_crossing"]["num_crossings"] is None:
             self.calculate_metric("edge_crossing")
 
@@ -412,16 +429,18 @@ class MetricsSuite():
         angles_sum = 0
         num_minor_nodes = 0
         for node in G.nodes:
+            # Only crosses promoted nodes should be counted
             if not self._is_minor(node, G):
                 continue
             
             num_minor_nodes += 1
-            ideal = 360 / G.degree[node]
+            ideal = 360 / G.degree[node] # This should always be 90 degrees, except in rare cases where multiple edges intersect at the exact same point
             
 
             x1, y1 = G.nodes[node]['x'], G.nodes[node]['y']
             actual_min = 360
 
+            # Iterate over adjacent edges and calculate the difference of the minimum angle from the ideal angle
             for adj in G.neighbors(node):
                 x2, y2 = G.nodes[adj]['x'], G.nodes[adj]['y']
                 angle1 = math.degrees(math.atan2((y2 - y1), (x2 - x1)))
@@ -440,17 +459,19 @@ class MetricsSuite():
 
             angles_sum += abs((ideal - actual_min) / ideal)
 
+        # Return 1 minus the average of minimum angles
         return 1 - (angles_sum / num_minor_nodes) if num_minor_nodes > 0 else 1
 
 
     def node_orthogonality(self):
+        """Calculate the metric for node orthogonality."""
         coord_set =[]
 
-        # first_node = 0
-        first_node = rand.sample(list(self.graph.nodes), 1)[0]
-        
+        # Start with random node
+        first_node = rand.sample(list(self.graph.nodes), 1)[0]        
         min_x, min_y = self.graph.nodes[first_node]["x"], self.graph.nodes[first_node]["y"]
 
+        # Find minimum x and y positions
         for node in self.graph.nodes:
             x = self.graph.nodes[node]["x"]
             y = self.graph.nodes[node]["y"]
@@ -468,7 +489,8 @@ class MetricsSuite():
             self.graph.nodes[node]["x"] = float(self.graph.nodes[node]["x"]) - x_distance
             self.graph.nodes[node]["y"] = float(self.graph.nodes[node]["y"]) - y_distance
 
-        # first_node = 0
+
+        # Start with random node
         first_node = rand.sample(list(self.graph.nodes), 1)[0]
         
         min_x, min_y = self.graph.nodes[first_node]["x"], self.graph.nodes[first_node]["y"]
@@ -479,11 +501,13 @@ class MetricsSuite():
 
             coord_set.append(x)
             coord_set.append(y)
-
+            
+            # Get GCD of node positions
             gcd = int(float(coord_set[0]))
             for coord in coord_set[1:]:
                 gcd = math.gcd(int(float(gcd)), int(float(coord)))
 
+            # Get maximum and minimum coordinates
             if x > max_x:
                 max_x = x
             elif x < min_x:
@@ -494,6 +518,7 @@ class MetricsSuite():
             elif y < min_y:
                 min_y = y 
 
+        # Get size of unit grid
         h = abs(max_y - min_y)
         w = abs(max_x - min_x)
 
@@ -502,10 +527,12 @@ class MetricsSuite():
 
         A = ((reduced_w+1) * (reduced_h+1))
 
+        # Return number of nodes on the unit grid weighted against the number of positions on the unit grid
         return len(self.graph.nodes) / A
 
 
     def _add_crossing_node(self, l1, l2, G, e, e2):
+        """Helper function for crosses promotion which adds a new node to graph G where e and e2 intersect."""
 
         x_diff = (l1[0][0] - l1[1][0], l2[0][0] - l2[1][0])
         y_diff = (l1[0][1] - l1[1][1], l2[0][1] - l2[1][1])
@@ -518,20 +545,23 @@ class MetricsSuite():
         if div == 0:
             return G
 
+        # Get position of intersection
         d = (det(*l1), det(*l2))
         x = det(d, x_diff) / div
         y = det(d, y_diff) / div
 
-        label = "c" + str(len(G.nodes()))
+        label = "c" + str(len(G.nodes())) # Must be a unique name, ensure graph doesn't already have nodes with the name 'c + some number'
 
         G.add_node(label)
 
+        # Add some default attributes to the node
         G.nodes[label]["label"] = '\n'
         G.nodes[label]["shape_type"] = "ellipse"
         G.nodes[label]["x"] = x
         G.nodes[label]["y"] = y
-        G.nodes[label]["type"] = "minor"
+        G.nodes[label]["type"] = "minor" # Only nodes added in crosses promotion are minor
 
+        # Add edges between the new node and end points of e and e2, then remove e and e2
         G.add_edge(e[0], label)
         G.add_edge(label, e[1])
 
@@ -544,23 +574,14 @@ class MetricsSuite():
         return G
 
 
-    def ccw(self, a, b, c):
-        return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
-
-    def intersect_2(self, a, b, c, d):
-        return self.ccw(a,c,d) != self.ccw(b,c,d) and self.ccw(a,b,c) != self.ccw(a,b,d)
-
-
-
     def crosses_promotion(self):
-        crosses_promoted_G = self.graph.copy()
+        """Perform crosses promotion on the graph, adding nodes where edges cross."""
+        crosses_promoted_G = self.graph.copy() # Maintain original graph by creating copy
         for node in crosses_promoted_G:
             crosses_promoted_G.nodes[node]["type"] = "major"
 
         if self.metrics["edge_crossing"]["num_crossings"] is None:
             self.calculate_metric("edge_crossing")
-
-#        print(self.metrics["edge_crossing"]["num_crossings"])
 
 
         num_crossings = self.metrics["edge_crossing"]["num_crossings"] 
@@ -569,36 +590,20 @@ class MetricsSuite():
         crossing_count = 0
         crossing_found = False
 
-        count_1 = 0
-        count_2 = -2
-
-        crossing_check = -1
+        # Until all crossings have been covered
         while crossing_count != num_crossings:
-            # if crossing_check == crossing_count:
-            #     print("$"*20)
-            #     print(crossing_count)
-            #     print("$"*20)
-            #     break
 
-            # if count_2 == crossing_count:
-            #     break
             crossing_found = False
 
-            # if crossing_count == 85:
-            #     break
-
-            # if self.
-
             edges = crosses_promoted_G.edges
-            #print("="*30)
-            #print(self.fname)
-            #print(f"{crossing_count}/{num_crossings}")
 
+            # Iterate over each pair of edges
             for e in edges:
+                # Don't need to check already covered crossings for second edge
                 if e in second_covered:
                     continue
                     
-
+                # Create line segment represnting first edge
                 source_node = crosses_promoted_G.nodes[e[0]]
                 target_node = crosses_promoted_G.nodes[e[1]]
                 
@@ -616,6 +621,7 @@ class MetricsSuite():
                     if e == e2:
                         continue
                     
+                    # Create line segment represnting second edge
                     source2_node = crosses_promoted_G.nodes[e2[0]]
                     target2_node = crosses_promoted_G.nodes[e2[1]]
 
@@ -629,27 +635,18 @@ class MetricsSuite():
                     l2_p2 = (l2_p2_x, l2_p2_y)
                     l2 = (l2_p1, l2_p2)
 
-                    # print("*"*20)
-                    # print(e, end= ', ')
-                    # print(e2)
-                    # print("*"*20)
-
-                    #if self.intersect_2(l1_p1, l1_p2, l2_p1, l2_p2):
-                    if self._intersect(l1, l2) and (l1, l2) not in second_covered: #purpose of second covered?                       
+                    # Check if line segments intersect
+                    if self._intersect(l1, l2):# and (l1, l2) not in second_covered:                    
                         crossing_count += 1
-                        #print(e, end= ', ')
-                        #print(e2)
-                        #print("="*30)
                         second_covered.append(e)
-                        #second_covered.append((l1, l2))
-                        #print(second_covered)
                         crosses_promoted_G = self._add_crossing_node(l1, l2, crosses_promoted_G, e, e2)
                         crossing_found = True
                         break
 
                 if crossing_found:
                     break
-
+            
+            # Debug info
             if not crossing_found:
                 print("$"*20)
                 print(f"{crossing_count}/{num_crossings}")
@@ -659,16 +656,6 @@ class MetricsSuite():
         self.graph_cross_promoted = crosses_promoted_G
         return crosses_promoted_G
 
-
-    def lineLineIntersect(self, P0, P1, Q0, Q1):  
-        d = (P1[0]-P0[0]) * (Q1[1]-Q0[1]) + (P1[1]-P0[1]) * (Q0[0]-Q1[0]) 
-        if d == 0:
-            return None
-        t = ((Q0[0]-P0[0]) * (Q1[1]-Q0[1]) + (Q0[1]-P0[1]) * (Q0[0]-Q1[0])) / d
-        u = ((Q0[0]-P0[0]) * (P1[1]-P0[1]) + (Q0[1]-P0[1]) * (P0[0]-P1[0])) / d
-        if 0 <= t <= 1 and 0 <= u <= 1:
-            return round(P1[0] * t + P0[0] * (1-t)), round(P1[1] * t + P0[1] * (1-t))
-        return None
 
     def intersect_line_line(self, P0, P1, Q0, Q1):  
         d = (P1[0]-P0[0]) * (Q1[1]-Q0[1]) + (P1[1]-P0[1]) * (Q0[0]-Q1[0]) 
@@ -712,7 +699,7 @@ class MetricsSuite():
                 nodes_to_add.append(point)
         
         for point in nodes_to_add:
-            label = "n" + str(len(crosses_promoted_G.nodes()))
+            label = "c" + str(len(crosses_promoted_G.nodes()))
 
             crosses_promoted_G.add_node(label)
 
@@ -742,89 +729,6 @@ class MetricsSuite():
                 pass
 
         return crosses_promoted_G
-
-
-    def crosses_promotion3(self):
-        crosses_promoted_G = self.graph.copy()
-        for node in crosses_promoted_G:
-            crosses_promoted_G.nodes[node]["type"] = "major"
-
-        if self.metrics["edge_crossing"]["num_crossings"] is None:
-            self.calculate_metric("edge_crossing")
-
-        #print(self.metrics["edge_crossing"]["num_crossings"])
-
-
-        num_crossings = self.metrics["edge_crossing"]["num_crossings"]
-        count = 0
-
-        while count < num_crossings:
-
-            lines = []
-            for edge in crosses_promoted_G.edges():
-                source_x, source_y = crosses_promoted_G.nodes[edge[0]]['x'], crosses_promoted_G.nodes[edge[0]]['y']
-                target_x, target_y = crosses_promoted_G.nodes[edge[1]]['x'], crosses_promoted_G.nodes[edge[1]]['y']
-                lines.append((source_x, source_y, target_x, target_y))
-
-            intersectionPoints = []
-            for i, line1 in enumerate(lines):
-                for line2 in lines[i:]:
-                    isectP = self.intersect_line_line(line1[:2], line1[2:], line2[:2], line2[2:])
-                    if isectP:
-                        intersectionPoints.append((line1, line2, isectP))
-                        intersect_found = True
-
-            #print(len(intersectionPoints))
-            
-            nodes_to_add = []
-            for point in intersectionPoints:
-                if not (point[2][0] in point[0] and point[2][1] in point[0]) or not (point[2][0] in point[1] and point[2][1] in point[1]):
-                    nodes_to_add.append(point)
-                    break
-            
-            
-            for point in nodes_to_add:
-
-                label = "n" + str(len(crosses_promoted_G.nodes()))
-
-                crosses_promoted_G.add_node(label)
-
-                crosses_promoted_G.nodes[label]["label"] = '\n'
-                crosses_promoted_G.nodes[label]["shape_type"] = "ellipse"
-                crosses_promoted_G.nodes[label]["x"] = point[2][0]
-                crosses_promoted_G.nodes[label]["y"] = point[2][1]
-                crosses_promoted_G.nodes[label]["type"] = "minor"
-
-                node1 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[0][0] and v['y']==point[0][1]][0]
-                node2 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[0][2] and v['y']==point[0][3]][0]
-                crosses_promoted_G.add_edge(node1, label)
-                crosses_promoted_G.add_edge(label, node2)
-
-                node3 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[1][0] and v['y']==point[1][1]][0]
-                node4 = [k for k,v in crosses_promoted_G.nodes(data=True) if v['x']==point[1][2] and v['y']==point[1][3]][0]
-                crosses_promoted_G.add_edge(node3, label)
-                crosses_promoted_G.add_edge(label, node4)
-
-                try:
-                    crosses_promoted_G.remove_edge(node1, node2)
-                except:
-                    pass
-                try:
-                    crosses_promoted_G.remove_edge(node3, node4)
-                except:
-                    pass
-
-                count += 1
-
-        
-        #print(num_crossings)
-        minor_nodes = 0
-        for node in crosses_promoted_G.nodes:
-            if crosses_promoted_G.nodes[node]['type'] == 'minor':
-                minor_nodes += 1
-
-        #print(minor_nodes)
-        return crosses_promoted_G
     
 
     def _find_bisectors(self, G):
@@ -832,6 +736,7 @@ class MetricsSuite():
         bisectors = []
         covered = []
 
+        # For each pair of nodes
         for n1 in G.nodes:
             n1_x, n1_y = G.nodes[n1]["x"], G.nodes[n1]["y"]
 
@@ -841,9 +746,11 @@ class MetricsSuite():
 
                 n2_x, n2_y = G.nodes[n2]["x"], G.nodes[n2]["y"]
 
+                # Get the midpoint between the two nodes
                 midpoint_x = (n2_x + n1_x) / 2
                 midpoint_y = (n2_y + n1_y) / 2
 
+                # Get the gradient of perpendicualr bisector
                 try:
                     initial_gradient = (n2_y - n1_y) / (n2_x - n1_x)
                     perp_gradient = (1 / initial_gradient) * -1
@@ -863,14 +770,16 @@ class MetricsSuite():
                 bisectors.append(grad_c)
                 covered.append((n2, n1))
 
-        return set(bisectors)
+        return set(bisectors) # Set removes duplicates
 
 
     def _is_minor(self, node, G):
+        """Returns True if a node was created by crosses promotion."""
         return G.nodes[node]["type"] == "minor"
 
 
     def _rel_point_line_dist(self, gradient, y_intercept, x ,y):
+        """Helper function to get the relative distance between a bisector and a point."""
         gradient *= -1
         y_intercept *= -1
 
@@ -880,6 +789,7 @@ class MetricsSuite():
 
 
     def _same_position(self, n1, n2, G, tolerance=0):
+        """Helper function to determine if two nodes are in the same postion, with some tolerance."""
         x1, y1 = G.nodes[n1]['x'], G.nodes[n1]['y']
         x2, y2 = G.nodes[n2]['x'], G.nodes[n2]['y']
 
@@ -890,22 +800,26 @@ class MetricsSuite():
 
 
     def _is_positive(self, x):
+        """Return true if x is postive."""
         return x > 0
 
 
     def _are_collinear(self, a, b, c, G):
-        """Returns true if the three points are collinear, by checking if the determinant is 0"""
+        """Returns true if the three points are collinear, by checking if the determinant is 0."""
         return ((G.nodes[a]['x']*G.nodes[b]['y']) + (G.nodes[b]['x']*G.nodes[c]['y']) + (G.nodes[c]['x']*G.nodes[a]['y'])
          - (G.nodes[a]['x']*G.nodes[c]['y']) - (G.nodes[b]['x']*G.nodes[a]['y']) - (G.nodes[c]['x']*G.nodes[b]['y'])) == 0
 
 
     def _mirror(self, axis, e1, e2, G, tolerance=0):
+        """Helper function to determine if two edges are mirrored about a bisector."""
         e1_p1_x, e1_p1_y = G.nodes[e1[0]]["x"], G.nodes[e1[0]]["y"]
         e1_p2_x, e1_p2_y = G.nodes[e1[1]]["x"], G.nodes[e1[1]]["y"]
 
         e2_p1_x, e2_p1_y = G.nodes[e2[0]]["x"], G.nodes[e2[0]]["y"]
         e2_p2_x, e2_p2_y = G.nodes[e2[1]]["x"], G.nodes[e2[1]]["y"]
 
+        # The end nodes of edge1 are P and Q
+        # The end nodes of edge2 are X and Y
         P, Q, X, Y = e1[0], e1[1], e2[0], e2[1]
 
         if axis[0] == "x":
@@ -975,7 +889,6 @@ class MetricsSuite():
 
         elif (self._same_rel_position(p, y, tolerance)  and self._same_rel_position(x, q, tolerance) ) and (self._is_positive(p) != self._is_positive(y)) and (self._is_positive(x) != self._is_positive(q)):
             # Distances are equal and signs are different
-            #print("f")
             x1, y1 = G.nodes[P]["x"], G.nodes[P]["y"]
             x2, y2 = G.nodes[Y]["x"], G.nodes[Y]["y"]
             x3, y3 = G.nodes[Q]["x"], G.nodes[Q]["y"]
@@ -992,6 +905,7 @@ class MetricsSuite():
 
 
     def _same_rel_position(self, a, b, tolerance=0):
+        """Helper function to determine if two nodes are in the same postion (regardless of sign compared to the bisector), with some tolerance."""
         if tolerance == 0:
             return abs(a) == abs(b)
         else:
@@ -999,42 +913,45 @@ class MetricsSuite():
 
 
     def _same_distance(self, a, b, tolerance=0.5):
+        """Helper function to determine if two distances are the same, with some tolerance."""
         return abs(abs(a)-abs(b)) <= tolerance
 
 
     def _sym_value(self, e1, e2, G):
-            # the end nodes of edge1 are P and Q
-            # the end nodes of edge2 are X and Y
-            P, Q, X, Y = e1[0], e1[1], e2[0], e2[1]
+        """Helper function to calcualte the level of symmetry between two edges, based on whoch nodes were crosses promoted."""
+        # The end nodes of edge1 are P and Q
+        # The end nodes of edge2 are X and Y
+        P, Q, X, Y = e1[0], e1[1], e2[0], e2[1]
 
-            
-            if self._is_minor(P, G) == self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):
-                # P=X and Q=Y
-                return 1
-            elif self._is_minor(P, G) == self._is_minor(Y, G) and self._is_minor(Q, G) == self._is_minor(X, G):
-                # P=Y and X=Q
-                return 1
-            elif self._is_minor(P, G) == self._is_minor(X, G) and self._is_minor(Q, G) != self._is_minor(Y, G):
-                # P=X but Q!=Y
-                return 0.5
-            elif self._is_minor(P, G) == self._is_minor(Y, G) and self._is_minor(Q, G) != self._is_minor(X, G):
-                # P=Y but Q!=X
-                return 0.5
-            elif self._is_minor(P, G) != self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):
-                # P!=X but Q==Y
-                return 0.5
-            elif self._is_minor(P, G) != self._is_minor(Y, G) and self._is_minor(Q, G) == self._is_minor(X, G):
-                # P!=Y but Q==X
-                return 0.5
-            elif self._is_minor(P, G) != self._is_minor(X, G) and self._is_minor(Q, G) != self._is_minor(Y, G):
-                # P!=X and Q!=Y
-                return 0.25
-            elif self._is_minor(P, G) != self._is_minor(Y, G) and self._is_minor(Q, G) != self._is_minor(X, G):
-                # P!=Y and Q!=X
-                return 0.25
+        
+        if self._is_minor(P, G) == self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):
+            # P=X and Q=Y
+            return 1
+        elif self._is_minor(P, G) == self._is_minor(Y, G) and self._is_minor(Q, G) == self._is_minor(X, G):
+            # P=Y and X=Q
+            return 1
+        elif self._is_minor(P, G) == self._is_minor(X, G) and self._is_minor(Q, G) != self._is_minor(Y, G):
+            # P=X but Q!=Y
+            return 0.5
+        elif self._is_minor(P, G) == self._is_minor(Y, G) and self._is_minor(Q, G) != self._is_minor(X, G):
+            # P=Y but Q!=X
+            return 0.5
+        elif self._is_minor(P, G) != self._is_minor(X, G) and self._is_minor(Q, G) == self._is_minor(Y, G):
+            # P!=X but Q==Y
+            return 0.5
+        elif self._is_minor(P, G) != self._is_minor(Y, G) and self._is_minor(Q, G) == self._is_minor(X, G):
+            # P!=Y but Q==X
+            return 0.5
+        elif self._is_minor(P, G) != self._is_minor(X, G) and self._is_minor(Q, G) != self._is_minor(Y, G):
+            # P!=X and Q!=Y
+            return 0.25
+        elif self._is_minor(P, G) != self._is_minor(Y, G) and self._is_minor(Q, G) != self._is_minor(X, G):
+            # P!=Y and Q!=X
+            return 0.25
 
 
     def _graph_to_points(self, G, edges=None):
+        """Helper function for convex hulls which converts a graph's nodes to a list of points."""
         points = []
 
         if edges is None:
@@ -1053,6 +970,7 @@ class MetricsSuite():
 
 
     def symmetry(self, G=None, show_sym=False, crosses_limit=50):
+        """Calcualte the symmetry metric. """
         self.calculate_metric("edge_crossing")
         if self.metrics["edge_crossing"]["num_crossings"] > crosses_limit:
             return 0
@@ -1060,7 +978,8 @@ class MetricsSuite():
         tolerance = self.sym_tolerance
 
         if G is None:
-            G = self.crosses_promotion2()
+            #G = self.crosses_promotion2() # May have to redo all SYM distributions if this was 2 for them
+            G = self.crosses_promotion()
 
         
         axes = self._find_bisectors(G)
@@ -1085,23 +1004,25 @@ class MetricsSuite():
                         sym_val += self._sym_value(e1, e2, G)
                         subgraph.append(e1)
                         subgraph.append(e2)
-                        
-
 
                     covered.append((e2,e1))
 
-            
+            # Compare number of mirrored edges to specified threshold
             if num_mirror >= threshold:
 
                 points = self._graph_to_points(G, subgraph)
 
                 if len(points) <= 2:
                     break
-
+                
+                # Add area of local symmetry to total area and add to total symmetry
                 conv_hull = ConvexHull(points, qhull_options="QJ")
                 sub_area = conv_hull.volume
                 total_area += sub_area
 
+                total_sym += (sym_val * sub_area) / (len(subgraph)/2)
+
+                # Debug info
                 if show_sym:
                     ag = nx.Graph()
                     ag.add_edges_from(subgraph)
@@ -1112,24 +1033,28 @@ class MetricsSuite():
                             ag.nodes[node]["y"] = G.nodes[node]["y"]
                     self.draw_graph(ag)
 
-                total_sym += (sym_val * sub_area) / (len(subgraph)/2)
-
+                
+        # Get the are of the convex hull of the graph
         whole_area_points = self._graph_to_points(G)
 
         whole_hull = ConvexHull(whole_area_points)
         whole_area = whole_hull.volume
 
+        # Return the symmetry weighted against either the area of the convex hull of the graph or the combined area of all local symmetries
         return total_sym / max(whole_area, total_area)
 
 
     def get_bounding_box(self, G=None):
+        """Helper function to get the bounding box of the graph."""
         if G is None:
             G = self.graph
 
+        # Start with a random node
         first_node = rand.sample(list(G.nodes), 1)[0]
         min_x, min_y = G.nodes[first_node]["x"], G.nodes[first_node]["y"]
         max_x, max_y = G.nodes[first_node]["x"], G.nodes[first_node]["y"]
 
+        # Get the maximum and minimum x and y positions.
         for node in G.nodes:
             x = G.nodes[node]["x"]
             y = G.nodes[node]["y"]
@@ -1150,17 +1075,22 @@ class MetricsSuite():
 
 
     def _euclidean_distance(self, a, b):
+        """Helper function to get the euclidean distance between two points a and b."""
         return math.sqrt(((b[0] - a[0])**2) + ((b[1] - a[1])**2))
 
 
     def node_resolution(self):
+        """Calulate the metric for node resolution, which is the ratio of the smallest and largest distance between any pair of nodes."""
 
+        # Start with two random nodes
         first_node, second_node = rand.sample(list(self.graph.nodes), 2)
         a = self.graph.nodes[first_node]['x'], self.graph.nodes[first_node]['y']
         b = self.graph.nodes[second_node]['x'], self.graph.nodes[second_node]['y']
 
         min_dist = self._euclidean_distance(a, b)
         max_dist = min_dist
+
+        # Iterate over every pair of nodes, keeping track of the maximum and minimum distances between them
         for i in self.graph.nodes:
             for j in self.graph.nodes:
                 if i == j:
@@ -1180,8 +1110,8 @@ class MetricsSuite():
         return min_dist / max_dist
         
 
-    def edge_length(self):
-        """Compare the edgle lengths to the ideal length"""
+    def edge_length(self, ideal=None):
+        """Calculate the edge length metric by comparing the edge lengths to an ideal length. Default ideal is average of all edge lengths."""
 
         ideal_edge_length = 0
         for edge in self.graph.edges:
@@ -1190,9 +1120,11 @@ class MetricsSuite():
             
             ideal_edge_length += self._euclidean_distance(a, b)
 
-        
-        # For unweighted graphs, set the ideal edge length to the average edge length
-        ideal_edge_length = ideal_edge_length / self.graph.number_of_edges()
+        if not ideal:
+            # For unweighted graphs, set the ideal edge length to the average edge length
+            ideal_edge_length = ideal_edge_length / self.graph.number_of_edges()
+        else:
+            ideal_edge_length = ideal
         
         edge_length_sum = 0
         for edge in self.graph.edges:
@@ -1222,7 +1154,7 @@ class MetricsSuite():
 
 
     def _in_circle(self, x, y, center_x, center_y, r):
-        """Return true if the point x,y is inside or on the perimiter of the circle with center center_x, center_y and radius r"""
+        """Return true if the point x, y is inside or on the perimiter of the circle with center center_x, center_y and radius r"""
         return ((x - center_x)**2 + (y - center_y)**2) <= r**2
 
 
@@ -1232,24 +1164,25 @@ class MetricsSuite():
 
 
     def gabriel_ratio(self):
+        """Calculate the metric for the gabriel ratio. A graph is a Gabriel graph if no node falls within the area of any circles constructed using each edge as its diameter."""
         
-        # total_possible_non_conforming_nodes = 0
-        # for edge in self.graph.edges:
-        #     total_possible_non_conforming_nodes += (self.graph.number_of_nodes() - 2)
-
+        # Initial upper bound on number of nodes which could potentially be violating nodes
         possible_non_conforming = (self.graph.number_of_edges() * self.graph.number_of_nodes()) - (self.graph.number_of_edges() * 2)
 
         
         num_non_conforming = 0
-
+        
+        # Iterate over each edge
         for edge in self.graph.edges:
-
+            
+            # Get the equation of the circle with the edge as its diameter
             a = self.graph.nodes[edge[0]]['x'], self.graph.nodes[edge[0]]['y']
             b = self.graph.nodes[edge[1]]['x'], self.graph.nodes[edge[1]]['y']
 
             r = self._euclidean_distance(a, b) / 2
             center_x, center_y = self._midpoint(edge[0], edge[1])
 
+            # Check if any nodes fall with within the circle and increment the counter if they do
             for node in self.graph.nodes:
                 if edge[0] == node or edge[1] == node:
                     continue
@@ -1266,7 +1199,7 @@ class MetricsSuite():
                         possible_non_conforming -= 1 
                     
 
-
+        # Return 1 minus the ratio of non conforming nodes to the upper bound on possible non conforming nodes.
         return 1 - (num_non_conforming / possible_non_conforming) if possible_non_conforming > 0 else 1
 
 

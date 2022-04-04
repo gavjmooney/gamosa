@@ -1,7 +1,5 @@
 from metrics_suite import MetricsSuite
-import networkx as nx
 from matplotlib import pyplot as plt
-import numpy as np
 import os
 import time
 import pandas as pd
@@ -16,28 +14,70 @@ def get_distributions(filename):
     df = df.loc[df['CA'] != "None"]
     df["CA"] = pd.to_numeric(df["CA"], downcast="float")
 
+    for col in df:
+        
+        df.hist(column=col, bins=40, figsize=(10,8))
+        plt.ylim(0,32180)
+        
+        plt.show()
+        
+        # df.hist(column=col, bins=40)
+    
 
-    # for col in df:
-    #     print(col)
-    #     df.hist(column=col)
-
+    fig, axs = plt.subplots(ncols=2, nrows=4)
     #hist = df.hist(bins=20)
     #hist1 = df.hist(bins=20, sharex=True)
-    hist2 = df.hist(bins=20, sharex=True, sharey=True)
+    hist2 = df.hist(bins=40, sharex=True, sharey=True, ax=axs)
     
-    # hist4 = df.hist(bins=20, column="CA")
+
+    plt.subplots_adjust(left=0.3,right=0.7,bottom=0.03,top=0.97,wspace=0.25,hspace=0.25)
+
+    plt.show()
+
+
+def get_distributions_excluding_no_crossings(filename):
+    df = pd.read_csv(filename)
+    #df = df.drop(columns=['filename', 'SYM', 'CA', 'time'])
+    df = df.drop(columns=['filename', 'SYM', 'time'])
+
+    # Get rid of None valued entries
+    df = df.loc[df['CA'] != "None"]
+    df["CA"] = pd.to_numeric(df["CA"], downcast="float")
+
+    df = df.drop(df[df['EC'] == 1].index)
+    # df = df.drop(columns=['NO'])
+
+    # print(len(df))
+    # for col in df:
+        
+    #     df.hist(column=col, bins=40, figsize=(10,8))
+    #     plt.ylim(0,32180)
+        
+    #     plt.show()
+        
+        # df.hist(column=col, bins=40)
     
+
+    fig, axs = plt.subplots(ncols=2, nrows=4)
+    #hist = df.hist(bins=20)
+    #hist1 = df.hist(bins=20, sharex=True)
+    hist2 = df.hist(bins=40, sharex=True, sharey=True, ax=axs)
+    
+
+    plt.subplots_adjust(left=0.3,right=0.7,bottom=0.03,top=0.97,wspace=0.25,hspace=0.25)
+
     plt.show()
 
 
 def count_ca(filename):
+    # Number of actual graphs for which crossing angle was calcuated
     df = pd.read_csv(filename)
-
     print(len(df[(df['CA'] != "None")]))
 
 
-
 def combine_ca(filename1, filename2, outfile):
+    # Old function which combined two CSV files. The first had data for drawings with les than 100 crossings
+    # and the second had those for crossings between 100-250
     df1 = pd.read_csv(filename1)
     df2 = pd.read_csv(filename2)
 
@@ -61,7 +101,10 @@ def combine_ca(filename1, filename2, outfile):
 
     df3.to_csv(outfile)
 
+
 def combine_all():
+    # Old function which combined two CSV files. The first had data for drawings with les than 100 crossings
+    # and the second had those for crossings between 100-250
     filename1 = "..\\..\\data\\nathan_distributions.csv"
     filename2 = "..\\..\\data\\nathan_crossing_distributions_less250.csv"
     filename3 = "..\\..\\data\\nathan_distributions_all.csv"
@@ -76,8 +119,9 @@ def combine_all():
     df3.to_csv(filename3)
 
 
-
 def get_metric_vals(in_dir, out_file, stat_file, file_type="GraphML"):
+    """Function for getting the metric values for a directory(in_dir) of graph drawings."""
+    # Change this to decide which metrics to calculate
     weights = {"edge_crossing": 1,
                 "edge_orthogonality": 0,
                 "node_orthogonality": 0,
@@ -141,6 +185,7 @@ def get_metric_vals(in_dir, out_file, stat_file, file_type="GraphML"):
 
 
 def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
+    # This is identical to get_metric_vals, just adapted so it can run repeatedly on the slower symmetry calculations.
     weights = {"edge_crossing": 1,
                 "edge_orthogonality": 0,
                 "node_orthogonality": 0,
@@ -155,7 +200,6 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
     with open(out_file, "a") as out_f:
         # header = "filename,EC,EO,NO,AR,SYM,NR,EL,GR,CA,crossings,time\n"
         # out_f.write(header)
-    
     
         i = 0
 
@@ -174,13 +218,12 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
         # Select random sample
         graphs = random.sample(fnames, limit)
 
-        #for file in os.listdir(directory):
         for file in graphs:
             if i == limit:
                 break
             i += 1
             time_a = time.time()
-            #filename = os.fsdecode(file)
+
             filename = file
             print(f"{i}:\t{filename}\t{i/limit*100:.2f}%")
 
@@ -215,34 +258,11 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
     summary = f"Average nodes: {total_nodes/i}\nAverage edges: {total_edges/i}\nAverage time: {total_time/i}"
     print(summary)
     with open(stat_file, "a") as out_f:
-        out_f.write("\n\n")
+        out_f.write("FIXED\n\n")
         out_f.write(summary)
 
+
 def main():
-    # in_dir = "..\\..\\graph_drawings\\nathan\\FR_1\\"
-    # out_file = "..\\..\\data\\nathan_fr_1_distributions.csv"
-    # stat_file = "..\\..\\data\\nathan_fr_1_stats.txt"
-
-    # in_dir = "..\\..\\graph_drawings\\nathan\\KK_1\\"
-    # out_file = "..\\..\\data\\nathan_kk_1_distributions.csv"
-    # stat_file = "..\\..\\data\\nathan_kk_1_stats.txt"
-
-    # in_dir = "..\\..\\graph_drawings\\nathan\\HOLA_1\\"
-    # out_file = "..\\..\\data\\nathan_hola_1_distributions.csv"
-    # stat_file = "..\\..\\data\\nathan_hola_1_stats.txt"
-
-    # in_dir = "..\\..\\graph_drawings\\nathan\\SUGI_1\\"
-    # out_file = "..\\..\\data\\nathan_sugi_1_distributions.csv"
-    # stat_file = "..\\..\\data\\nathan_sugi_1_stats.txt"
-
-    # in_dir = "..\\..\\graph_drawings\\nathan\\HOLA_0\\"
-    # out_file = "..\\..\\data\\nathan_hola_0_distributions.csv"
-    # stat_file = "..\\..\\data\\nathan_hola_0_stats.txt"
-
-    # in_dir = "..\\..\\graph_drawings\\nathan\\FR_0\\"
-    # out_file = "..\\..\\data\\nathan_fr_0_distributions.csv"
-    # stat_file = "..\\..\\data\\nathan_fr_0_stats.txt"
-
     # in_dir = "..\\..\\graph_drawings\\nathan\\"
     # out_file = "..\\..\\data\\nathan_distributions.csv"
     # stat_file = "..\\..\\data\\nathan_stats.txt"
@@ -261,7 +281,7 @@ def main():
     out_file = "..\\..\\data\\nathan_sym_distributions.csv"
     stat_file = "..\\..\\data\\nathan_sym_stats.txt"
 
-    get_sym(in_dir, out_file, stat_file, file_type="GraphML")
+    #get_sym(in_dir, out_file, stat_file, file_type="GraphML")
 
     #filename = "..\\..\\data\\nathan_distributions.csv"
     #filename = "..\\..\\data\\asonam_b-f_distributions.csv"
@@ -283,9 +303,8 @@ def main():
 
     # combine_all()
 
-    # filename = "..\\..\\data\\nathan_distributions_all.csv"
-    # get_distributions(filename)
-    
+    filename = "..\\..\\data\\nathan_distributions_all_copy.csv"
+    get_distributions_excluding_no_crossings(filename)
 
 
 if __name__ == "__main__":

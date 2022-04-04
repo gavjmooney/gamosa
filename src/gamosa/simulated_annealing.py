@@ -1,4 +1,3 @@
-from operator import ne
 from matplotlib import pyplot as plt
 from metrics_suite import MetricsSuite
 import networkx as nx
@@ -85,7 +84,6 @@ class SimulatedAnnealing():
     def _initial_load(self, graph):
         """Use the coordinates of a loaded graph drawing as the initial positions. Existing drawings 
         should already have positions assigned to nodes."""
-
         for node, attributes in graph.nodes(data=True):
             assert 'x' in attributes, f"Error: No X coordinate for node: {node}"
             assert 'y' in attributes, f"Error: No Y coordinate for node: {node}"
@@ -95,7 +93,6 @@ class SimulatedAnnealing():
 
     def _initial_x_axis(self, graph):
         """Position nodes along the x axis"""
-
         position = 0
         for node in graph.nodes:
             graph.nodes[node]["x"] = position
@@ -107,7 +104,6 @@ class SimulatedAnnealing():
 
     def _initial_y_axis(self, graph):
         """Position nodes along the x axis"""
-
         position = 0
         for node in graph.nodes:
             graph.nodes[node]["x"] = 0
@@ -119,7 +115,6 @@ class SimulatedAnnealing():
 
     def _initial_xy_pos(self, graph):
         """Position nodes alone the line y=x"""
-
         position = 0
         for node in graph.nodes:
             graph.nodes[node]["x"] = position
@@ -131,7 +126,6 @@ class SimulatedAnnealing():
 
     def _initial_xy_neg(self, graph):
         """Position nodes alone the line y=-x"""
-
         position = 0
         for node in graph.nodes:
             graph.nodes[node]["x"] = position
@@ -142,11 +136,12 @@ class SimulatedAnnealing():
 
 
     def _initial_grid(self, graph):
-        
+        """Position nodes in an orthogonal grid"""
         i = 0
         j = 0
         n = graph.number_of_nodes()
 
+        # Check grid size
         if self.grid_w < 0:
             raise ValueError(f"w must be non negative but is {self.grid_w}")
         if self.grid_h < 0:
@@ -159,13 +154,14 @@ class SimulatedAnnealing():
         if self.grid_w * self.grid_h < n:
             raise ValueError(f"grid not large enough with width {self.grid_w} and height {self.grid_h}, need at least {n} spaces, currently there are {self.grid_w*self.grid_h}")
 
+        # Create the positions on the grid
         positions = []
         for i in range(self.grid_h):
             for j in range(self.grid_w):
                 positions.append((j*self.initial_dist, -i*self.initial_dist))
 
-        #positions = positions[:n]
-
+        
+        # Assign the nodes to the position on the grid
         for node, pos in zip(graph.nodes, positions):
             graph.nodes[node]["x"] = pos[0]
             graph.nodes[node]["y"] = pos[1]
@@ -174,7 +170,8 @@ class SimulatedAnnealing():
 
 
     def _initial_polygon(self, graph):
-
+        """Position the nodes around the perimeter of a regualr polygon"""
+        # Check polygon has at least 3 sides
         if type(self.n_polygon_sides) != int:
             raise TypeError(f"n_polygon_sides must be of type int, not {type(self.n_polygon_sides)}")
 
@@ -191,8 +188,9 @@ class SimulatedAnnealing():
 
         sides = self.n_polygon_sides
         n = graph.number_of_nodes()
-        length = self.initial_dist * n / sides
+        length = self.initial_dist * n / sides # Scale size of graph with number of nodes
 
+        # First get the positions of corners of the polygons
         polygon_corners = []
         x, y = 0, 0
         angle = 0
@@ -201,7 +199,8 @@ class SimulatedAnnealing():
             angle += 360/sides
             x = x + (length * math.cos(math.radians(angle)))
             y = y + (length * math.sin(math.radians(angle)))
-            
+        
+        # If there are less or the same nodes as there are sides to the polygon, just assign the nodes to corners postions
         if n <= sides:
             i = 0
             for node in graph:
@@ -210,12 +209,14 @@ class SimulatedAnnealing():
 
             return graph
 
+        # Otherwise, position the nodes evenly around the perimeter of the polygon
         nodes_per_side = round(n / sides)
 
         perfect_fit = False
         if n % sides == 0:
             perfect_fit = True
 
+        # Loop over each side
         node_count = 0
         positions = []
         for i in range(sides):
@@ -232,7 +233,8 @@ class SimulatedAnnealing():
                         node_count += 1
                         k+=1
                     break
-            
+
+            # Place the nodes for the current side
             for j in range(nodes_per_side):
                 x = (polygon_corners[i][0] * (1-(j/nodes_per_side))) + (polygon_corners[i+1][0] * (j/nodes_per_side))
                 y = (polygon_corners[i][1] * (1-(j/nodes_per_side))) + (polygon_corners[i+1][1] * (j/nodes_per_side))
@@ -245,12 +247,13 @@ class SimulatedAnnealing():
             if node_count == n:
                     break
 
-
+        # Check if the nodes do not reach the final corner of the polygon
         need_fixed = 0
         for pos in polygon_corners:
             if pos not in positions:
                 need_fixed += 1
 
+        # Ensure all corners of the polygons have nodes in them by swapping some along the perimeter
         while need_fixed > 0:
             i = len(positions) - 1
             while i > 0:
@@ -261,7 +264,7 @@ class SimulatedAnnealing():
             positions[i] = polygon_corners[-need_fixed]
             need_fixed -= 1
 
-
+        # Assign the positions to the node attributes
         i = 0
         for node in graph:
             graph.nodes[node]["x"], graph.nodes[node]["y"] = positions[i]
@@ -271,22 +274,24 @@ class SimulatedAnnealing():
 
 
     def _midpoint(self, a, b):
+        """Return the midpoint of two lines"""
         mid_x = (a[0] + b[0]) / 2
         mid_y = (a[1] + b[1]) / 2
         return (mid_x, mid_y)
 
 
     def _distance(self, a, b):
+        """Return the euclidean distance between two points"""
         return math.sqrt((a[0]-b[0])**2 + (a[1] - b[1])**2)
 
 
     def _is_between(self, a, b, c):
+        """Return true if point c is between points a and b (in a straight line)"""
         return math.isclose(self._distance(a,c) + self._distance(c,b), self._distance(a,b))
 
 
     def _initial_random(self, graph):
         """Assign nodes to random positions as the initial layout for the algorithm."""
-
         pos = nx.random_layout(graph)
         for k,v in pos.items():
             pos[k] = {"x":v[0]*graph.number_of_nodes()*20, "y":v[1]*graph.number_of_nodes()*20}
@@ -326,11 +331,6 @@ class SimulatedAnnealing():
     def _step_random_bounded(self, graph):
         """Move the position of n random nodes to a new random position, bounded by a circle of decreasing size, where n is defined 
         in self.n_nodes_random_step"""
-        
-        #ms = MetricsSuite(graph)
-        #bb = ms.get_bounding_box()
-
-
         for random_node in rand.sample(list(graph.nodes), self.n_nodes_random_step):
             r = self.step_bound_radius * math.sqrt(rand.random())
             theta = rand.random() * 2 * math.pi
@@ -386,55 +386,50 @@ class SimulatedAnnealing():
         return num_perfect_metrics == num_metrics
 
 
-    def anneal(self):
+    def anneal(self, print_stats=True):
+        # Get initial config and set best layout to the initial layout
         best_ms = MetricsSuite(self.initial_config, self.metric_suite.initial_weights, self.metric_suite.mcdat)
         best = self.initial_config.copy()
         best_eval = best_ms.combine_metrics()
         self.initial_eval = best_eval
 
-        curr, curr_eval = best, best_eval
+        curr, curr_eval = best, best_eval # Set the current layout to the initial layout
 
-        self.n_accepted, self.n_total = 0, 0 # for statistical purposes
+        self.n_accepted, self.n_total = 0, 0 # For statistical purposes
 
         for i in range(self.n_iters):
-            print(i)
-            # If all the metrics are satisfactory, exit the algorithm early
-            #if self._check_satisfactory(best_ms):
-            #    break
+            if print_stats:
+                print(i)
 
             self.n_total += 1
             
+            # Propose a new candidate layout
             candidate = best.copy()
-            candidate = self.next_step(candidate)
+            candidate = self.next_step(candidate) # Using the next_step parameter to create a new layout
             candidate_ms = MetricsSuite(candidate, self.metric_suite.initial_weights, self.metric_suite.mcdat)
-            candidate_eval = candidate_ms.combine_metrics()
+            candidate_eval = candidate_ms.combine_metrics() # Evaluate this layout
 
-            #candidate_ms.draw_graph()
-
-            
-
+            # Decide whether to accept a worse solution as the new current solution probabalistically accoridng to the current temperature
             diff = candidate_eval - curr_eval
-            #print(f"{rand.random()} < {math.exp(-diff/self.t)}")
-            if rand.random() < math.exp(-diff/self.t): # possibly make this yet another parameter?
+            if rand.random() < math.exp(-diff/self.t):
                 curr, curr_eval = candidate, candidate_eval
                 self.n_accepted += 1
-                
-
+            
+            # Check if there is a new best solution
             if candidate_eval > best_eval:
                 best, best_eval, best_ms = candidate, candidate_eval, candidate_ms
-                #print(f"{i}: best")
 
-
-            self.t = self.cooling_schedule(i)
-           
-        print(f"Acceptance rate: {self.n_accepted/self.n_total if self.n_total > 0 else 0}")
-        print(f"Initial eval: {self.initial_eval}")
-        print(f"Best eval after {self.n_total} iterations: {best_eval}")
+            self.t = self.cooling_schedule(i) # Update the temperature according to the cooling schedule
+        
+        if print_stats:
+            print(f"Acceptance rate: {self.n_accepted/self.n_total if self.n_total > 0 else 0}")
+            print(f"Initial eval: {self.initial_eval}")
+            print(f"Best eval after {self.n_total} iterations: {best_eval}")
         return best
 
 
     def plot_temperatures(self):
-
+        """Plot the cooling schedules"""
         num_axis = len(self.cooling_schedules.keys())
         axis = [None for i in range(num_axis)]  
 
@@ -454,8 +449,6 @@ class SimulatedAnnealing():
                 t = self.cooling_schedules[cs](n+1)
                 temperatures.append(t)
 
-            
-
             plt.subplot(int(str(num_rows)+ str(num_cols) + str(i+1)))
             plt.plot(iterations, temperatures)
             plt.title(cs)
@@ -464,7 +457,8 @@ class SimulatedAnnealing():
         plt.show()
 
 
-    def plot_temperatures2(self):
+    def plot_temperatures_2(self):
+        """Plot cooling schedules, without using loop for more customization"""
 
         plt.figure()
         plt.xlabel('Iteration')
