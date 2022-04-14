@@ -34,6 +34,41 @@ def get_distributions(filename):
 
     plt.show()
 
+def get_sym_distributions(filename):
+    df = pd.read_csv(filename)
+    #df = df.drop(columns=['filename', 'SYM', 'CA', 'time'])
+    df = df.drop(columns=['filename', 'time'])
+
+    # Get rid of None valued entries
+    # df = df.loc[df['CA'] != "None"]
+    # df["CA"] = pd.to_numeric(df["CA"], downcast="float")
+
+    for col in df:
+        
+        df.hist(column=col, bins=40, figsize=(10,8), range=[0,1])
+        #plt.ylim(0,32180)
+        #plt.xticks([x/10 for x in range(11)])
+        if col == "SYM":
+            plt.ylabel("# of Graph Drawings")
+            plt.xlabel("Metric Value")
+            plt.title("Distribution of SYM Values")
+            plt.savefig("sym.pdf", format="pdf", bbox_inches="tight")
+        
+            plt.show()
+        
+        # df.hist(column=col, bins=40)
+    
+
+    fig, axs = plt.subplots()
+    #hist = df.hist(bins=20)
+    #hist1 = df.hist(bins=20, sharex=True)
+    hist2 = df.hist(bins=40, sharex=True, sharey=False, ax=axs)
+    
+
+    plt.subplots_adjust(left=0.3,right=0.7,bottom=0.03,top=0.97,wspace=0.25,hspace=0.25)
+
+    plt.show()
+
 
 def get_distributions_excluding_no_crossings(filename):
     df = pd.read_csv(filename)
@@ -261,6 +296,35 @@ def get_sym(in_dir, out_file, stat_file, file_type="GraphML"):
         out_f.write("FIXED\n\n")
         out_f.write(summary)
 
+def combine_sym():
+    filename1 = "..\\..\\data\\nathan_sym_distributions.csv"
+    filename2 = "..\\..\\data\\nathan_distributions.csv"
+
+    df1 = pd.read_csv(filename1)
+    df2 = pd.read_csv(filename2)
+
+    print(df1)
+    df1 = df1.drop(df1[df1['num_crossings'] >= 50].index)
+    df1 = df1.drop_duplicates()
+
+    df1 = df1[:-2]
+
+    df3 = pd.DataFrame(columns=['filename', 'EC', 'EO', 'NO', 'AR', 'SYM', 'NR', 'EL', 'GR', 'CA','time'])
+    print(df1)
+    new_col = []
+
+    for index, row in df2.iterrows():
+        #assert row['filename'] == df1.iloc[index]['filename']
+        for index2, row2 in df1.iterrows():
+            if row['filename'] == row2['filename']:
+                row_copy = row.copy()
+                row_copy['SYM'] = row2['SYM']
+                df3 = df3.append(row_copy)
+                
+    print(df3)
+    print(df1['time'].mean())
+    print(df1['time'].max())
+    df3.to_csv("..\\..\\data\\nathan_sym_distributions_all.csv")
 
 def main():
     # in_dir = "..\\..\\graph_drawings\\nathan\\"
@@ -277,11 +341,11 @@ def main():
 
     #get_metric_vals(in_dir, out_file, stat_file, file_type="GraphML")
 
-    in_dir = "..\\..\\graph_drawings\\nathan\\"
-    out_file = "..\\..\\data\\nathan_sym_distributions.csv"
-    stat_file = "..\\..\\data\\nathan_sym_stats.txt"
+    # in_dir = "..\\..\\graph_drawings\\nathan\\"
+    # out_file = "..\\..\\data\\nathan_sym_distributions.csv"
+    # stat_file = "..\\..\\data\\nathan_sym_stats.txt"
 
-    #get_sym(in_dir, out_file, stat_file, file_type="GraphML")
+    # get_sym(in_dir, out_file, stat_file, file_type="GraphML")
 
     #filename = "..\\..\\data\\nathan_distributions.csv"
     #filename = "..\\..\\data\\asonam_b-f_distributions.csv"
@@ -303,8 +367,12 @@ def main():
 
     # combine_all()
 
-    filename = "..\\..\\data\\nathan_distributions_all_copy.csv"
-    get_distributions_excluding_no_crossings(filename)
+    #filename = "..\\..\\data\\nathan_distributions_all_copy.csv"
+    #get_distributions_excluding_no_crossings(filename)
+
+    #combine_sym()
+    filename = "..\\..\\data\\nathan_sym_distributions_all.csv"
+    get_sym_distributions(filename)
 
 
 if __name__ == "__main__":

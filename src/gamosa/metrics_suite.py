@@ -1,3 +1,5 @@
+from logging import exception
+from msilib.schema import Error
 import networkx as nx
 import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull
@@ -28,6 +30,8 @@ class MetricsSuite():
         self.mcdat_dict = {"weighted_sum":self._weighted_sum,
                            "weighted_prod":self._weighted_prod,
         }
+
+        self.graph_cross_promoted = None
 
         # Check all metrics given are valid and assign weights
         if metric_weights:
@@ -114,6 +118,9 @@ class MetricsSuite():
 
     def load_graph(self, filename, file_type="GraphML"):
         """Loads a graph from a file."""
+
+        if not (filename.lower().endswith('gml') or filename.lower().endswith('graphml')):
+            raise Error("Filetype must be GraphML.")
 
         # Accounts for some files which are actually GML files, but have the GraphML extension
         with open(filename) as f:
@@ -424,7 +431,10 @@ class MetricsSuite():
         if self.metrics["edge_crossing"]["num_crossings"] > crossing_limit:
             return 0
 
-        G = self.crosses_promotion()
+        if self.graph_cross_promoted is None:
+            G = self.crosses_promotion()
+        else:
+            G = self.graph_cross_promoted
 
         angles_sum = 0
         num_minor_nodes = 0
@@ -904,9 +914,11 @@ class MetricsSuite():
         tolerance = self.sym_tolerance
 
         if G is None:
-            #G = self.crosses_promotion2() # May have to redo all SYM distributions if this was 2 for them
-            G = self.crosses_promotion()
-
+            if self.graph_cross_promoted is None:
+                G = self.crosses_promotion()
+            else:
+                G = self.graph_cross_promoted
+            
         
         axes = self._find_bisectors(G)
 
@@ -1131,7 +1143,3 @@ class MetricsSuite():
 
 if __name__ == "__main__":
     pass
-
-
-
-    

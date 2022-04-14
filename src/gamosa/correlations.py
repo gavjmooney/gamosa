@@ -85,7 +85,7 @@ def get_correlations(filename, one_fig=True, hide_half=True, show_line=True, inc
                 plt.show()
 
 
-def get_correlation(filename, metric1, metric2, show_line=True):
+def get_correlation(filename, metric1, metric2, show_line=True, include_crossings=False):
     # Show correlation scatter plot for one pair of metrics
     df = pd.read_csv(filename)
     df = df.drop(columns=['filename', 'SYM', 'time'])
@@ -96,6 +96,10 @@ def get_correlation(filename, metric1, metric2, show_line=True):
 
     df = df[:-2]
 
+    if not include_crossings:
+        df = df.drop(df[df['EC'] == 1].index)
+        df = df.drop(columns=['NO'])
+
     plt.scatter(df[metric1], df[metric2])
     plt.xlim(0, 1)
     plt.ylim(0, 1)
@@ -104,6 +108,7 @@ def get_correlation(filename, metric1, metric2, show_line=True):
         plt.plot(df[metric1], intercept + slope * df[metric1], linewidth=1, color='red')
     plt.xlabel(metric1)
     plt.ylabel(metric2)
+    plt.title(f"Correlation between {metric1} and {metric2}")
     
     plt.show()
 
@@ -125,14 +130,25 @@ def correlation_matrix(filename, include_crossings=True):
     if not include_crossings:
         df = df.drop(df[df['EC'] == 1].index)
         df = df.drop(columns=['NO'])
+        
         labels = ["EC", "EO", "AR", "NR", "EL", "GR", "CA"]
 
+    print(len(df))
 
     corr_matrix = df.corr() #pearsons
     corr_matrix = round(corr_matrix, 3)
 
+    for i, l in zip(range(len(labels)), labels):
+        for j, l2 in zip(range(len(labels)), labels):
+            if i > j:
+                corr_matrix[l][l2] = None
+
+    print(corr_matrix)
+
+    cmap = plt.get_cmap('plasma').copy()
+    cmap.set_bad(color='white')
     fig, ax = plt.subplots()
-    im = ax.imshow(corr_matrix)
+    im = ax.imshow(corr_matrix, cmap=cmap)
     im.set_clim(-1, 1)
     ax.grid(False)
     ax.xaxis.set(ticks=range(len(labels)), ticklabels=labels)
@@ -140,18 +156,72 @@ def correlation_matrix(filename, include_crossings=True):
 
     for i in range(len(labels)):
         for j in range(len(labels)):
-            ax.text(j, i, str(corr_matrix.iloc[i,j]), ha='center', va='center', color='red')
+            if i >= j:
+                ax.text(j, i, str(corr_matrix.iloc[i,j]), ha='center', va='center', color='lime')
             pass
     cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
-    #plt.savefig("myImagePDF.pdf", format="pdf", bbox_inches="tight")
+    #plt.savefig("correlations.pdf", format="pdf", bbox_inches="tight")
+    plt.show()
+
+def sym_correlation_matrix(filename, include_crossings=True):
+    # Get the correlation matrix
+    df = pd.read_csv(filename)
+    df = df.drop(columns=['filename', 'time'])
+    #df = df.drop(columns=['NO'])
+
+    # Get rid of None valued entries
+    df = df.loc[df['CA'] != "None"]
+    df["CA"] = pd.to_numeric(df["CA"], downcast="float")
+
+    df = df[:-2]
+
+    labels = ["EC", "EO", "NO", "AR", "SYM", "NR", "EL", "GR", "CA"]
+
+    if not include_crossings:
+        df = df.drop(df[df['EC'] == 1].index)
+        df = df.drop(columns=['NO'])
+        
+        labels = ["EC", "EO", "AR", "NR", "EL", "GR", "CA"]
+
+    print(len(df))
+
+    corr_matrix = df.corr() #pearsons
+    corr_matrix = round(corr_matrix, 3)
+
+    for i, l in zip(range(len(labels)), labels):
+        for j, l2 in zip(range(len(labels)), labels):
+            if i > j:
+                corr_matrix[l][l2] = None
+
+    print(corr_matrix)
+
+    cmap = plt.get_cmap('plasma').copy()
+    cmap.set_bad(color='white')
+    fig, ax = plt.subplots()
+    im = ax.imshow(corr_matrix, cmap=cmap)
+    im.set_clim(-1, 1)
+    ax.grid(False)
+    ax.xaxis.set(ticks=range(len(labels)), ticklabels=labels)
+    ax.yaxis.set(ticks=range(len(labels)), ticklabels=labels)
+
+    for i in range(len(labels)):
+        for j in range(len(labels)):
+            if i >= j:
+                ax.text(j, i, str(corr_matrix.iloc[i,j]), ha='center', va='center', color='lime', size=8)
+            pass
+    cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
+    #plt.savefig("sym_correlations.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 
 def main():
-    filename = "..\\..\\data\\nathan_distributions_all.csv"
-    correlation_matrix(filename, include_crossings=False)
-    #get_correlations(filename, True, include_crossings=False)
-    #get_correlation(filename, "AR", "NR")
+    filename = "..\\..\\data\\nathan_sym_distributions_all.csv"
+    sym_correlation_matrix(filename, include_crossings=True)
+    # filename = "..\\..\\data\\nathan_distributions.csv"
+    # #correlation_matrix(filename, False)
+    # get_correlations(filename, True, include_crossings=False)
+    # get_correlation(filename, "EC", "GR")
+    # get_correlation(filename, "EC", "AR")
     #get_distributions(filename)
     
 
