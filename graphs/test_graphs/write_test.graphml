@@ -1,0 +1,104 @@
+<?xml version="1.0" ?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:y="http://www.yworks.com/xml/graphml" xmlns:yed="http://www.yworks.com/xml/yed/3">
+    <key id="d1" yfiles.type="nodegraphics" for="node"/>
+    <graph id="G" edgedefault="undirected">
+        <node id="0">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="0" y="0"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="1">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="1" y="1"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="2">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="2" y="2"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="3">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="3" y="3"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="4">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="4" y="4"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="5">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="5" y="5"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="6">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="6" y="6"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <node id="7">
+            <data key="d1">
+                <y:ShapeNode>
+                    <y:Fill transparent="false" color="#FFCC00"/>
+                    <y:Geometry height="30" width="30" x="7" y="7"/>
+                    <y:Shape type="ellipse"/>
+                    <y:NodeLabel textColor="#000000" fontSize="6">
+</y:NodeLabel>
+                </y:ShapeNode>
+            </data>
+        </node>
+        <edge source="0" target="2"/>
+        <edge source="0" target="7"/>
+        <edge source="0" target="5"/>
+        <edge source="1" target="7"/>
+        <edge source="2" target="6"/>
+        <edge source="3" target="4"/>
+        <edge source="3" target="5"/>
+        <edge source="4" target="5"/>
+        <edge source="4" target="7"/>
+        <edge source="4" target="6"/>
+    </graph>
+</graphml>
